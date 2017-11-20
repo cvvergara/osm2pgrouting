@@ -114,7 +114,9 @@ class OSMDocument {
                     std::cerr << "Failed to fork" << endl;
                     exit(1);
                 }
-                if (pid > 0) return;
+                if (pid > 0) {
+                    return;
+                }
             }
             auto residue = osm_items.size() % m_chunk_size;
             size_t start = residue? osm_items.size() - residue : osm_items.size() - m_chunk_size;

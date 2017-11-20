@@ -117,8 +117,8 @@ OSMDocument::endOfFile() const {
     if (m_vm.count("addnodes")) {
         wait_child();
         osm_table_export(m_relations, "osm_relations");
-        std::cout << "\nEnd Of file\n\n\n";
     }
+    std::cout << "\nEnd Of file\n\n\n";
 }
 
 
