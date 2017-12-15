@@ -12,4 +12,4 @@ fix_typos
 .project
 .cproject
 .vagrant
-run.sh
+.directory
