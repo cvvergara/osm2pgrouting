@@ -21,7 +21,6 @@
 #ifndef SRC_WAY_H_
 #define SRC_WAY_H_
 
-#include <boost/lexical_cast.hpp>
 #include <vector>
 #include <map>
 #include <string>
@@ -89,12 +88,8 @@ class Way : public Element {
      std::string length_str() const;
 
 
-     inline std::string maxspeed_forward_str() const {
-         return boost::lexical_cast<std::string>(m_maxspeed_forward);
-     }
-     inline std::string maxspeed_backward_str() const {
-         return boost::lexical_cast<std::string>(m_maxspeed_backward);
-     }
+     std::string maxspeed_forward_str() const;
+     std::string maxspeed_backward_str() const;
 
 
      //! splits the way

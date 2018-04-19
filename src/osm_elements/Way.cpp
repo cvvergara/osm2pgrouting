@@ -75,6 +75,15 @@ Way::length_str() const {
     return length_str(m_NodeRefs);
 }
 
+std::string
+Way::maxspeed_forward_str() const {
+    return boost::lexical_cast<std::string>(m_maxspeed_forward);
+}
+
+std::string
+Way::maxspeed_backward_str() const {
+    return boost::lexical_cast<std::string>(m_maxspeed_backward);
+}
 
 std::string
 Way::geometry_str(const std::vector<Node*> &nodeRefs) const {

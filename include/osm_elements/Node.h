@@ -23,7 +23,6 @@
 #define SRC_NODE_H_
 #pragma once
 
-#include <boost/lexical_cast.hpp>
 #include <cstdint>
 #include <string>
 #include <map>
@@ -83,9 +82,7 @@ class Node : public Element {
              + geom_str(" ") + ")";
      }
 
-     inline std::string osm_id_str() {
-         return boost::lexical_cast<std::string>(m_osm_id);
-     }
+     std::string osm_id_str();
      double getLength(const Node &previous) const;
 
 

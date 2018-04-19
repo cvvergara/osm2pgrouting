@@ -23,7 +23,6 @@
 #define SRC_OSM_TAG_H_
 #pragma once
 
-#include <boost/lexical_cast.hpp>
 #include <cstdint>
 #include <string>
 #include <map>

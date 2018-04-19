@@ -33,7 +33,6 @@
 
 namespace osm2pgr {
 
-
 Node::Node(const char **atts) :
     Element(atts),
     m_numsOfUse(0) {
@@ -46,6 +45,11 @@ Node::tag_config(const Tag &tag) {
     Element::tag_config(tag);
     ++m_numsOfUse;
     ++m_numsOfUse;
+}
+
+std::string
+Node::osm_id_str() {
+    return boost::lexical_cast<std::string>(m_osm_id);
 }
 
 
