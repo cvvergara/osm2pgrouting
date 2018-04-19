@@ -20,6 +20,7 @@
 
 
 #include "osm_elements/osm_tag.h"
+#include <iostream>
 #include <string>
 #include <algorithm>
 
@@ -42,7 +43,7 @@ Tag::Tag(const char **atts) {
 }
 
 std::ostream& operator<<(std::ostream &os, const Tag& tag) {
-    os << tag.key() << std::string("=>") << tag.value();
+    os << tag.key() << "=>" << tag.value();
     return os;
 }
 
