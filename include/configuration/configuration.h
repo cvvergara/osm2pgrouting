@@ -22,7 +22,7 @@
 
 #include <string>
 #include <map>
-#include <boost/lexical_cast.hpp>
+
 #include "configuration/tag_key.h"
 #include "configuration/tag_value.h"
 #include "osm_elements/osm_tag.h"

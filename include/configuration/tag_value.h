@@ -21,7 +21,6 @@
 #ifndef SRC_CLASS_H_
 #define SRC_CLASS_H_
 
-#include <boost/lexical_cast.hpp>
 #include <osm_elements/osm_element.h>
 #include <cassert>
 #include <map>

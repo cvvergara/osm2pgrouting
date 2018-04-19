@@ -20,7 +20,6 @@
 
 #include "parser/ConfigurationParserCallback.h"
 
-#include <boost/lexical_cast.hpp>
 #include <string>
 
 #include "osm_elements/OSMDocument.h"
