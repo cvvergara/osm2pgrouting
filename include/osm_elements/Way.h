@@ -64,7 +64,7 @@ class Way : public Element {
      void add_node(int64_t node_id);
 
      std::vector<Node*>& nodeRefs() {return m_NodeRefs;}
-     const std::vector<Node*> nodeRefs() const {return m_NodeRefs;}
+     // const std::vector<Node*> nodeRefs() const {return m_NodeRefs;}
 
 
      std::string members_str() const;
