@@ -97,9 +97,12 @@ class Table {
      std::vector<std::string> m_sql;
 };
 
+}
+
 
 #include "utilities/prog_options.h"
 
+namespace osm2pgr {
 
 class Tables {
     public:
