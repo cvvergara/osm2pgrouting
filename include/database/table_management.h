@@ -79,7 +79,7 @@ class Table {
      std::string drop() const;
 
      /* modifier */
-     void add_sql(const string& sql) {
+     void add_sql(const std::string& sql) {
          m_sql.push_back(sql);
      }
 
