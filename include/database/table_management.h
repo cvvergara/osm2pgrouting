@@ -20,7 +20,6 @@
 /** @file **/
 #pragma once
 #include <string>
-#include "utilities/prog_options.h"
 
 namespace osm2pgr {
 
@@ -99,6 +98,7 @@ class Table {
 };
 
 
+#include "utilities/prog_options.h"
 
 
 class Tables {
