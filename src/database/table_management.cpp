@@ -130,6 +130,10 @@ Table::drop() const {
     return "DROP TABLE IF EXISTS " + addSchema() + " CASCADE;";
 }
 
+void
+Table::add_sql(const std::string& sql) {
+    m_sql.push_back(sql);
+}
 
 std::string
 Table::temp_name() const {
