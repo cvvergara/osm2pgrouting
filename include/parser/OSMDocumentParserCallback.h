@@ -30,7 +30,7 @@
 #endif
 
 
-#include <string>
+#include <stddef.h>
 #include "./XMLParser.h"
 
 namespace osm2pgr {
