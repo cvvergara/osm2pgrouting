@@ -29,7 +29,7 @@
 #define nullptr NULL
 #endif
 
-#include <string.h>
+#include <string>
 #include "XMLParser.h"
 
 
