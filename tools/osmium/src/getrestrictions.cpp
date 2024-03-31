@@ -43,6 +43,7 @@
 
 
 
+int
 main(int argc, char *argv[]) {
     using index_type = osmium::index::map::SparseMemArray<osmium::unsigned_object_id_type, osmium::Location>;
     using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
@@ -55,7 +56,11 @@ main(int argc, char *argv[]) {
      *  the input file
      */
     std::string in_file_name = argv[1];
-    std::string out_file_name = 
+
+    /* TODO
+     * The output file
+     */
+    std::string out_file_name =
         std::string(in_file_name, 0, in_file_name.size()-4) + "_restrictions.sql";
 
     std::cout << "processing: " << in_file_name << "\n";
@@ -68,6 +73,7 @@ main(int argc, char *argv[]) {
 
     /*
      * Reading the create table query
+     * TODO save in a C++ variable
      */
     std::ifstream f("../restrictions.sql");
     std::stringstream buffer;

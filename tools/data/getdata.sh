@@ -1,6 +1,4 @@
-#!sh
-
-exit(0);
+#!/bin/bash
 
 # https://github.com/GeographicaGS/osm-itinera/blob/master/itinera/const.py#L43
 BBOX="1.97180,41.26684,2.26478,41.55818"
@@ -15,7 +13,7 @@ wget --progress=dot:mega -O "germany_restrictions.osm" "http://overpass-api.de/a
 
 #query to get world restrictions
 #times out does not work well
-wget --progress=dot:mega -O "world_restrictions.osm" "http://overpass-api.de/api/interpreter?data=(relation[\"type\"~\"^restriction\"];);(._;>;);out;"
+#wget --progress=dot:mega -O "world_restrictions.osm" "http://overpass-api.de/api/interpreter?data=(relation[\"type\"~\"^restriction\"];);(._;>;);out;"
 
 
 BBOX="-122.8,45.4,-122.5,45.6"
