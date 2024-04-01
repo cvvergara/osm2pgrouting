@@ -1,4 +1,4 @@
-PROJECT(getrestrictions)
+PROJECT(getnodes)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
 
 if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
@@ -8,7 +8,7 @@ if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
 endif()
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-SET(SHARE_DIR "/usr/share/getrestrictions")
+SET(SHARE_DIR "/usr/share/getnodes")
 
 FIND_PACKAGE(PostgreSQL REQUIRED)
 find_package(LibPQXX REQUIRED)
@@ -20,10 +20,6 @@ if(NOT OSMIUM_FOUND)
     message(WARNING "Libosmium not found!\n")
 endif()
 include_directories(SYSTEM ${OSMIUM_INCLUDE_DIRS})
-
-
-
-
 
 
 FIND_PACKAGE(Boost)
@@ -58,9 +54,9 @@ INCLUDE_DIRECTORIES(
     ${OSM2PGROUTING_INCLUDE_DIRS}
     )
 
-ADD_EXECUTABLE(getrestrictions ${SRC})
+ADD_EXECUTABLE(getnodes ${SRC})
 
-TARGET_LINK_LIBRARIES(getrestrictions
+TARGET_LINK_LIBRARIES(getnodes
     ${LIBPQXX_LIBRARIES}
     ${POSTGRESQL_LIBRARIES}
     ${EXPAT_LIBRARIES}
@@ -68,7 +64,7 @@ TARGET_LINK_LIBRARIES(getrestrictions
     ${OSMIUM_LIBRARIES}
     )
 
-INSTALL(TARGETS getrestrictions
+INSTALL(TARGETS getnodes
     RUNTIME DESTINATION "/usr/bin"
     )
 
