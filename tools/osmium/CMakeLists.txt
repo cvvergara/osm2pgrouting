@@ -1,4 +1,4 @@
-PROJECT(getrestirction)
+PROJECT(getrestrictions)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
 
 if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
@@ -30,12 +30,12 @@ FIND_PACKAGE(Boost)
 if(Boost_INCLUDE_DIRS)
     message(STATUS "Boost headers were found here: ${Boost_INCLUDE_DIRS}")
 else(Boost_INCLUDE_DIRS)
-    message(FATAL_ERROR " Please check your Boost installation ") 
+    message(FATAL_ERROR " Please check your Boost installation ")
 endif(Boost_INCLUDE_DIRS)
 
 FIND_PACKAGE(Boost COMPONENTS program_options REQUIRED)
 
-FILE(GLOB SRC "${CMAKE_SOURCE_DIR}/src/*.cpp"  "${CMAKE_SOURCE_DIR}/src/*/*.cpp")
+FILE(GLOB SRC "${CMAKE_SOURCE_DIR}/restrictions/*.cpp"  "${CMAKE_SOURCE_DIR}/restrictions/*/*.cpp")
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_FILE_OFFSET_BITS=64 -std=c++0x")
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g -Wconversion -pedantic -Wextra  -frounding-math -Wno-deprecated -fmax-errors=10")
@@ -50,7 +50,7 @@ message(STATUS "POSTGRESQL_LIBRARIES: ${POSTGRESQL_LIBRARIES}")
 message(STATUS "Boost_LIBRARIES: ${boost_LIBRARIES}")
 message(STATUS "LIBPQXX_LIBRARIES: ${LIBPQXX_LIBRARIES}")
 
-INCLUDE_DIRECTORIES(src
+INCLUDE_DIRECTORIES(
     ${LIBPQXX_INCLUDE_DIRS}
     ${POSTGRESQL_INCLUDE_DIR}
     ${EXPAT_INCLUDE_DIRS}
