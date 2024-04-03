@@ -86,23 +86,88 @@ class BreakLines : public osmium::handler::Handler {
     }
   }
 
-  void copy_way(osmium::memory::Buffer& buffer, const osmium::Way& way) {
+  void copy_nodes(
+      osmium::memory::Buffer& buffer,
+      osmium::builder::WayBuilder& builder,
+      const osmium::WayNodeList& nodes,
+      const std::vector<osmium::object_id_type>& nodes_to_copy) {
+      osmium::builder::WayNodeListBuilder wnl_builder{buffer, &builder};
+      // Copy the node list to the new way.
+      // use front to start copying and back to end the copy
+      bool found_front{false};
+      for (const auto& n : nodes) {
+        if (!found_front && n.ref()!= nodes_to_copy.front()) continue;
+        found_front = true;
+        osmium::NodeRef nr(n.ref(), n.location());
+        wnl_builder.add_node_ref(nr);
+        if (n.ref() == nodes_to_copy.back()) break;
+      }
+  }
+
+  void copy_way(
+      osmium::memory::Buffer& buffer,
+      const osmium::Way& way,
+      const std::vector<osmium::object_id_type>& nodes_to_copy) {
     /* the way builder */
     osmium::builder::WayBuilder builder{buffer};
 
     /* keep atrributes and tags */
     copy_attributes(builder, way);
     copy_tags(builder, way.tags());
+    copy_nodes(buffer, builder, way.nodes(), nodes_to_copy);
+  }
 
-    /* copy the nodes */
-    {
-      osmium::builder::WayNodeListBuilder wnl_builder{buffer, &builder};
-      // Copy the node list over to the new way.
-      for (const auto& n : way.nodes()) {
-        osmium::NodeRef nr(n.ref(), n.location());
-        wnl_builder.add_node_ref(nr);
+  void split_way(const osmium::Way& way) {
+    bool first{true};
+    bool last{false};
+    std::vector<std::vector<osmium::object_id_type>> segments;
+    std::vector<osmium::object_id_type> segment;
+    osmium::object_id_type last_node;
+    for (const auto& n : way.nodes()) {
+      last_node = n.ref();
+      if (first) {
+        first = false;
+        segment.push_back(n.ref());
+      } else if (nodeSet[n.positive_ref()] == 1) {
+        segment.push_back(n.ref());
+      } else if (nodeSet[n.positive_ref()] > 1) {
+        last = true;
+        segment.push_back(n.ref());
+      }
+      if (last) {
+        last = false;
+        segments.push_back(segment);
+        segment.clear();
+        segment.push_back(n.ref());
       }
     }
+    if (!last) {
+      /* when the last node is a dead end */
+      if (segment.size() > 1) segments.push_back(segment);
+    }
+
+    std::cout << "\noriginal way: ";
+    for (const auto& n : way.nodes()) {
+      std::cout << n.ref() << ",";
+    }
+    for (const auto &s : segments) {
+      const int buffer_size = 10240;
+
+      /* buffer for the new way auto grows */
+      osmium::memory::Buffer way_buffer{buffer_size, osmium::memory::Buffer::auto_grow::yes};
+
+      /* copy the way into the buffer and commit the buffer*/
+      copy_way(way_buffer, way, s);
+      way_buffer.commit();
+
+      osmium::Way& new_way = way_buffer.get<osmium::Way>(0);
+
+      std::cout << "\n     segment: ";
+      for (const auto& n : new_way.nodes()) {
+        std::cout << n.ref() << ",";
+      }
+    }
+    std::cout << "\n\n";
   }
 
   public:
@@ -112,6 +177,8 @@ class BreakLines : public osmium::handler::Handler {
     }
 
   void way(const osmium::Way& way) {
+    split_way(way);
+#if 0
     const int buffer_size = 10240;
 
     /* buffer for the new way auto grows */
@@ -134,6 +201,7 @@ class BreakLines : public osmium::handler::Handler {
       std::cout << n.ref() << ",";
     }
     std::cout << "\n";
+#endif
   }
 
 #if 0
@@ -142,66 +210,66 @@ class BreakLines : public osmium::handler::Handler {
     copy_attributes(builder, way);
     copy_tags(builder, way.tags());
 
-      {
-        osmium::builder::WayNodeListBuilder wnl_builder{m_buffer, &builder};
-        // Copy the node list over to the new way.
-        for (const auto& n : way.nodes()) {
-          osmium::NodeRef nr(n.ref(), n.location());
-          wnl_builder.add_node_ref(nr);
-        }
+    {
+      osmium::builder::WayNodeListBuilder wnl_builder{m_buffer, &builder};
+      // Copy the node list over to the new way.
+      for (const auto& n : way.nodes()) {
+        osmium::NodeRef nr(n.ref(), n.location());
+        wnl_builder.add_node_ref(nr);
       }
-
-      builder.add_item(way.nodes());
     }
-    m_buffer.commit();
 
-    osmium::Way& new_way = m_buffer.get<osmium::Way>(0);
+    builder.add_item(way.nodes());
+  }
+  m_buffer.commit();
 
-    std::cout << "original way " << way.id() << ": ";
-    for (const auto& n : way.nodes()) {
-      std::cout << n.ref() << ",";
-    }
-    std::cout << "\n";
+  osmium::Way& new_way = m_buffer.get<osmium::Way>(0);
 
-    std::cout << "     new way " << way.id() << ": ";
-    for (const auto& n : new_way.nodes()) {
-      std::cout << n.ref() << ",";
-    }
-    std::cout << "\n";
+  std::cout << "original way " << way.id() << ": ";
+  for (const auto& n : way.nodes()) {
+    std::cout << n.ref() << ",";
+  }
+  std::cout << "\n";
+
+  std::cout << "     new way " << way.id() << ": ";
+  for (const auto& n : new_way.nodes()) {
+    std::cout << n.ref() << ",";
+  }
+  std::cout << "\n";
 #endif
 #if 0
 
-    if (!way.tags().has_key("highway")) return;
+  if (!way.tags().has_key("highway")) return;
 
-    osmium::geom::WKTFactory<> factory;
-    auto wkt = factory.create_linestring(way);
+  osmium::geom::WKTFactory<> factory;
+  auto wkt = factory.create_linestring(way);
 
-    std::cout << "original way " << way.id() << ": ";
-    for (const auto& n : way.nodes()) {
-      std::cout << n.ref() << ",";
-    }
-    std::cout << "\n";
-    bool first{true};
-    bool last{false};
-    for (const auto& n : way.nodes()) {
-      osmium::geom::WKTFactory<> factory;
-      auto wkt = factory.create_point(n);
-      if (first) {
-        first = false;
-        std::cout << "first:" << n.ref() << ",";
-      } else if (nodeSet[n.positive_ref()] == 1) {
-        std::cout << n.ref() << ",";
-      } else if (nodeSet[n.positive_ref()] > 1) {
-        last = true;
-        std::cout << n.ref() << "\n";
-      }
-      if (last) {
-        last = false;
-        std::cout << "first:" << n.ref() << ",";
-      }
-    }
-    std::cout << "\n\n";
+  std::cout << "original way " << way.id() << ": ";
+  for (const auto& n : way.nodes()) {
+    std::cout << n.ref() << ",";
   }
+  std::cout << "\n";
+  bool first{true};
+  bool last{false};
+  for (const auto& n : way.nodes()) {
+    osmium::geom::WKTFactory<> factory;
+    auto wkt = factory.create_point(n);
+    if (first) {
+      first = false;
+      std::cout << "first:" << n.ref() << ",";
+    } else if (nodeSet[n.positive_ref()] == 1) {
+      std::cout << n.ref() << ",";
+    } else if (nodeSet[n.positive_ref()] > 1) {
+      last = true;
+      std::cout << n.ref() << "\n";
+    }
+    if (last) {
+      last = false;
+      std::cout << "first:" << n.ref() << ",";
+    }
+  }
+  std::cout << "\n\n";
+}
 #endif
 };
 
