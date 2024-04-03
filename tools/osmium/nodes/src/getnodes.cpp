@@ -86,6 +86,25 @@ class BreakLines : public osmium::handler::Handler {
     }
   }
 
+  void copy_way(osmium::memory::Buffer& buffer, const osmium::Way& way) {
+    /* the way builder */
+    osmium::builder::WayBuilder builder{buffer};
+
+    /* keep atrributes and tags */
+    copy_attributes(builder, way);
+    copy_tags(builder, way.tags());
+
+    /* copy the nodes */
+    {
+      osmium::builder::WayNodeListBuilder wnl_builder{buffer, &builder};
+      // Copy the node list over to the new way.
+      for (const auto& n : way.nodes()) {
+        osmium::NodeRef nr(n.ref(), n.location());
+        wnl_builder.add_node_ref(nr);
+      }
+    }
+  }
+
   public:
   // Constructor. New data will be added to the given buffer.
   explicit BreakLines(osmium::memory::Buffer& buffer) :
@@ -93,20 +112,64 @@ class BreakLines : public osmium::handler::Handler {
     }
 
   void way(const osmium::Way& way) {
-#if 0
-    {
-      osmium::builder::WayBuilder builder{m_buffer};
-      copy_attributes(builder, way);
-      copy_tags(builder, way.tags());
+    const int buffer_size = 10240;
 
-      // Copy the node list over to the new way.
+    /* buffer for the new way auto grows */
+    osmium::memory::Buffer way_buffer{buffer_size, osmium::memory::Buffer::auto_grow::yes};
+
+    /* copy the way into the buffer and commit the buffer*/
+    copy_way(way_buffer, way);
+    way_buffer.commit();
+
+    osmium::Way& new_way = way_buffer.get<osmium::Way>(0);
+
+    std::cout << "original way " << way.id() << ": ";
+    for (const auto& n : way.nodes()) {
+      std::cout << n.ref() << ",";
+    }
+    std::cout << "\n";
+
+    std::cout << "     new way " << way.id() << ": ";
+    for (const auto& n : new_way.nodes()) {
+      std::cout << n.ref() << ",";
+    }
+    std::cout << "\n";
+  }
+
+#if 0
+  {
+    osmium::builder::WayBuilder builder{m_buffer};
+    copy_attributes(builder, way);
+    copy_tags(builder, way.tags());
+
+      {
+        osmium::builder::WayNodeListBuilder wnl_builder{m_buffer, &builder};
+        // Copy the node list over to the new way.
+        for (const auto& n : way.nodes()) {
+          osmium::NodeRef nr(n.ref(), n.location());
+          wnl_builder.add_node_ref(nr);
+        }
+      }
+
       builder.add_item(way.nodes());
     }
     m_buffer.commit();
 
     osmium::Way& new_way = m_buffer.get<osmium::Way>(0);
+
+    std::cout << "original way " << way.id() << ": ";
+    for (const auto& n : way.nodes()) {
+      std::cout << n.ref() << ",";
+    }
+    std::cout << "\n";
+
+    std::cout << "     new way " << way.id() << ": ";
+    for (const auto& n : new_way.nodes()) {
+      std::cout << n.ref() << ",";
+    }
+    std::cout << "\n";
 #endif
-#if 1
+#if 0
 
     if (!way.tags().has_key("highway")) return;
 
@@ -138,8 +201,8 @@ class BreakLines : public osmium::handler::Handler {
       }
     }
     std::cout << "\n\n";
-#endif
   }
+#endif
 };
 
 class MyHandler : public osmium::handler::Handler {
