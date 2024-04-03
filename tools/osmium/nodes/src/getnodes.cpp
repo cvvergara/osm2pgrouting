@@ -45,11 +45,14 @@ std::map<osmium::unsigned_object_id_type, int> nodeSet;
 
 struct NodeCounter : public osmium::handler::Handler
 {
-
   void way(const osmium::Way& way)
   {
+#if 0
+    /* this check shoud match the split checks */
+    if (!way.tags().has_key("highway")) return;
+#endif
     for (const auto& node : way.nodes())
-      nodeSet[node.positive_ref()]++;
+      nodeSet[node.ref()]++;
   }
 };
 
@@ -97,10 +100,10 @@ class BreakLines : public osmium::handler::Handler {
       bool found_front{false};
       for (const auto& n : nodes) {
         if (!found_front && n.ref()!= nodes_to_copy.front()) continue;
-        found_front = true;
         osmium::NodeRef nr(n.ref(), n.location());
         wnl_builder.add_node_ref(nr);
-        if (n.ref() == nodes_to_copy.back()) break;
+        if (found_front && n.ref() == nodes_to_copy.back()) break;
+        found_front = true;
       }
   }
 
@@ -123,27 +126,40 @@ class BreakLines : public osmium::handler::Handler {
     std::vector<std::vector<osmium::object_id_type>> segments;
     std::vector<osmium::object_id_type> segment;
     osmium::object_id_type last_node;
+    osmium::object_id_type first_node;
     for (const auto& n : way.nodes()) {
-      last_node = n.ref();
       if (first) {
         first = false;
+        first_node = n.ref();
         segment.push_back(n.ref());
-      } else if (nodeSet[n.positive_ref()] == 1) {
+      } else if (nodeSet[n.ref()] == 1) {
         segment.push_back(n.ref());
-      } else if (nodeSet[n.positive_ref()] > 1) {
+        last_node = n.ref();
+      } else if (nodeSet[n.ref()] > 1) {
         last = true;
+        last_node = n.ref();
         segment.push_back(n.ref());
       }
       if (last) {
-        last = false;
-        segments.push_back(segment);
+        if (segment.front() != first_node) std::cerr << "first node does not match";
+        if (segment.back() != last_node) std::cerr << "last node does not match";
+        std::vector<osmium::object_id_type> s = {first_node, last_node};
+        segments.push_back(s);
         segment.clear();
+        last = false;
+        first_node = n.ref();
+        last_node = 0;
         segment.push_back(n.ref());
       }
     }
     if (!last) {
       /* when the last node is a dead end */
+      std::cout << first_node << "," << last_node;
       if (segment.size() > 1) segments.push_back(segment);
+      if (last_node != 0) {
+        std::vector<osmium::object_id_type> s = {first_node, last_node};
+        segments.push_back(s);
+      }
     }
 
     std::cout << "\noriginal way: ";
@@ -177,7 +193,13 @@ class BreakLines : public osmium::handler::Handler {
     }
 
   void way(const osmium::Way& way) {
+#if 0
+    /* this check shoud match the node count */
+    if (!way.tags().has_key("highway")) return;
+#endif
     split_way(way);
+  }
+
 #if 0
     const int buffer_size = 10240;
 
@@ -202,8 +224,6 @@ class BreakLines : public osmium::handler::Handler {
     }
     std::cout << "\n";
 #endif
-  }
-
 #if 0
   {
     osmium::builder::WayBuilder builder{m_buffer};
@@ -257,9 +277,9 @@ class BreakLines : public osmium::handler::Handler {
     if (first) {
       first = false;
       std::cout << "first:" << n.ref() << ",";
-    } else if (nodeSet[n.positive_ref()] == 1) {
+    } else if (nodeSet[n.ref()] == 1) {
       std::cout << n.ref() << ",";
-    } else if (nodeSet[n.positive_ref()] > 1) {
+    } else if (nodeSet[n.ref()] > 1) {
       last = true;
       std::cout << n.ref() << "\n";
     }
