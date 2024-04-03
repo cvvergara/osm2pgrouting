@@ -98,12 +98,25 @@ class BreakLines : public osmium::handler::Handler {
       // Copy the node list to the new way.
       // use front to start copying and back to end the copy
       bool found_front{false};
-      for (const auto& n : nodes) {
-        if (!found_front && n.ref()!= nodes_to_copy.front()) continue;
-        osmium::NodeRef nr(n.ref(), n.location());
+      size_t front = 0;
+      for (std::size_t i = 0; i < nodes.size() ; ++i) {
+        /* Note the node */
+        if (!found_front && nodes[i].ref()!= nodes_to_copy[front]) continue;
+        /* The next node is not the wanted one */
+        if (!found_front && (i + 1 < nodes.size()) && nodes[i + 1].ref() != nodes_to_copy[front + 1]) continue;
+        /* Node belongs to the segment */
+        osmium::NodeRef nr(nodes[i].ref(), nodes[i].location());
         wnl_builder.add_node_ref(nr);
-        if (found_front && n.ref() == nodes_to_copy.back()) break;
+        if (found_front && nodes[i].ref() == nodes_to_copy.back()) break;
+        /* Placing this assignment at the end
+         * takes care of circular ways like by creating a loop.
+         * 250078288,656832218,656081895,250078290,656081899,250078288
+         * TODO further break up the loop
+         * 250078288,656832218,656081895,250078290,656081899,
+         * 656081899,250078288
+         */
         found_front = true;
+        ++front;
       }
   }
 
@@ -125,41 +138,26 @@ class BreakLines : public osmium::handler::Handler {
     bool last{false};
     std::vector<std::vector<osmium::object_id_type>> segments;
     std::vector<osmium::object_id_type> segment;
-    osmium::object_id_type last_node;
-    osmium::object_id_type first_node;
     for (const auto& n : way.nodes()) {
       if (first) {
         first = false;
-        first_node = n.ref();
         segment.push_back(n.ref());
       } else if (nodeSet[n.ref()] == 1) {
         segment.push_back(n.ref());
-        last_node = n.ref();
       } else if (nodeSet[n.ref()] > 1) {
         last = true;
-        last_node = n.ref();
         segment.push_back(n.ref());
       }
       if (last) {
-        if (segment.front() != first_node) std::cerr << "first node does not match";
-        if (segment.back() != last_node) std::cerr << "last node does not match";
-        std::vector<osmium::object_id_type> s = {first_node, last_node};
-        segments.push_back(s);
+        segments.push_back(segment);
         segment.clear();
         last = false;
-        first_node = n.ref();
-        last_node = 0;
         segment.push_back(n.ref());
       }
     }
     if (!last) {
       /* when the last node is a dead end */
-      std::cout << first_node << "," << last_node;
       if (segment.size() > 1) segments.push_back(segment);
-      if (last_node != 0) {
-        std::vector<osmium::object_id_type> s = {first_node, last_node};
-        segments.push_back(s);
-      }
     }
 
     std::cout << "\noriginal way: ";
