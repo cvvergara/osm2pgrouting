@@ -160,10 +160,29 @@ class BreakLines : public osmium::handler::Handler {
       if (segment.size() > 1) segments.push_back(segment);
     }
 
+    /* Check self intersecting segments
+     * takes care of circular ways like by creating a loop.
+     * 250078288,656832218,656081895,250078290,656081899,250078288
+     * break up the loop
+     * 250078288,656832218,656081895,250078290,656081899,
+     * 656081899,250078288
+     */
+    std::vector<std::vector<osmium::object_id_type>> new_segments;
+    for (auto &s : segments) {
+      if (s.front() != s.back()) continue;
+      std::vector<osmium::object_id_type> new_segment;
+      new_segment.push_back(s[s.size()-2]);
+      new_segment.push_back(s[s.size()-1]);
+      s.pop_back();
+      new_segments.push_back(new_segment);
+    }
+    segments.insert(segments.end(), new_segments.begin(), new_segments.end());
+
     std::cout << "\noriginal way: ";
     for (const auto& n : way.nodes()) {
       std::cout << n.ref() << ",";
     }
+
     for (const auto &s : segments) {
       const int buffer_size = 10240;
 
