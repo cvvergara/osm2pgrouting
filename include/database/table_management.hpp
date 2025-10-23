@@ -20,7 +20,7 @@
 /** @file **/
 #pragma once
 #include <string>
-#include "utilities/prog_options.h"
+#include "utilities/prog_options.hpp"
 
 namespace osm2pgr {
 

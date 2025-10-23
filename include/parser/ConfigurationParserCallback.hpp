@@ -27,8 +27,8 @@
 #define nullptr NULL
 #endif
 
-#include <string.h>
-#include "XMLParser.h"
+#include <string>
+#include "XMLParser.hpp"
 
 
 namespace osm2pgr {

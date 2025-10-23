@@ -28,12 +28,12 @@
 #include <vector>
 #include <string>
 
-#include "osm_elements/Node.h"
-#include "osm_elements/Way.h"
-#include "osm_elements/Relation.h"
-#include "configuration/configuration.h"
-#include "utilities/prog_options.h"
-#include "database/table_management.h"
+#include "osm_elements/Node.hpp"
+#include "osm_elements/Way.hpp"
+#include "osm_elements/Relation.hpp"
+#include "configuration/configuration.hpp"
+#include "utilities/prog_options.hpp"
+#include "database/table_management.hpp"
 
 namespace osm2pgr {
 

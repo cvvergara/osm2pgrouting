@@ -22,7 +22,7 @@
 #define SRC_CLASS_H_
 
 #include <boost/lexical_cast.hpp>
-#include <osm_elements/osm_element.h>
+#include <osm_elements/osm_element.hpp>
 #include <cassert>
 #include <map>
 #include <string>

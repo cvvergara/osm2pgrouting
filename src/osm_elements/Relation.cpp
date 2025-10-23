@@ -21,7 +21,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <string>
-#include "osm_elements/Relation.h"
+#include "osm_elements/Relation.hpp"
 
 namespace osm2pgr {
 

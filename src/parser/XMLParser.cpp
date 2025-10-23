@@ -19,10 +19,10 @@
  ***************************************************************************/
 
 
-#include "parser/XMLParser.h"
+#include "parser/XMLParser.hpp"
 
-#include <errno.h>
-#include <string.h>
+#include <cerrno>
+#include <string>
 #include <iostream>
 #include <cstdio>
 

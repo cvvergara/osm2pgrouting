@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 
-#include "configuration/configuration.h"
+#include "configuration/configuration.hpp"
 #include <boost/lexical_cast.hpp>
 #include <iostream>
 #include <string>

@@ -27,7 +27,7 @@
 #include <cstdint>
 #include <string>
 #include <map>
-#include "./osm_element.h"
+#include "./osm_element.hpp"
 
 namespace osm2pgr {
 

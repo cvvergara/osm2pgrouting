@@ -25,8 +25,8 @@
 #include <vector>
 #include <map>
 #include <string>
-#include "./osm_element.h"
-#include "./Node.h"
+#include "./osm_element.hpp"
+#include "./Node.hpp"
 
 namespace osm2pgr {
 

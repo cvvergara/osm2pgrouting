@@ -27,9 +27,9 @@
 #include <boost/lexical_cast.hpp>
 #include <map>
 #include <cassert>
-#include <math.h>
-#include "osm_elements/osm_tag.h"
-#include "osm_elements/Node.h"
+#include <cmath>
+#include "osm_elements/osm_tag.hpp"
+#include "osm_elements/Node.hpp"
 
 namespace osm2pgr {
 

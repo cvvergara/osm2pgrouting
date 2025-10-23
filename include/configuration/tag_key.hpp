@@ -26,7 +26,7 @@
 #include <cstdint>
 #include <cassert>
 #include <string>
-#include "./tag_value.h"
+#include "./tag_value.hpp"
 
 namespace osm2pgr {
 

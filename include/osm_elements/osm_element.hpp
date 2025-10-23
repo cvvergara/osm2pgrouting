@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "./osm_tag.h"
+#include "./osm_tag.hpp"
 
 namespace osm2pgr {
 

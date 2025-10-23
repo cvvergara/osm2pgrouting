@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "configuration/tag_value.h"
+#include "configuration/tag_value.hpp"
 #include <boost/lexical_cast.hpp>
 #include <string>
 #include <cassert>

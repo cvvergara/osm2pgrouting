@@ -25,10 +25,10 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include "utilities/utilities.h"
-#include "configuration/configuration.h"
-#include "utilities/prog_options.h"
-#include "database/Export2DB.h"
+#include "utilities/utilities.hpp"
+#include "configuration/configuration.hpp"
+#include "utilities/prog_options.hpp"
+#include "database/Export2DB.hpp"
 
 namespace osm2pgr {
 

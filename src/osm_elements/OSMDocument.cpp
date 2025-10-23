@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "osm_elements/OSMDocument.h"
+#include "osm_elements/OSMDocument.hpp"
 
 #include <boost/lexical_cast.hpp>
 #include <vector>
@@ -29,15 +29,15 @@
 #include <algorithm>
 
 #if 0
-#include <sys/wait.h>
+#include <sys/wait.hpp>
 #endif
 
-#include "utilities/utilities.h"
-#include "configuration/configuration.h"
-#include "osm_elements/Node.h"
-#include "osm_elements/Relation.h"
-#include "osm_elements/Way.h"
-#include "database/Export2DB.h"
+#include "utilities/utilities.hpp"
+#include "configuration/configuration.hpp"
+#include "osm_elements/Node.hpp"
+#include "osm_elements/Relation.hpp"
+#include "osm_elements/Way.hpp"
+#include "database/Export2DB.hpp"
 
 namespace osm2pgr {
 
