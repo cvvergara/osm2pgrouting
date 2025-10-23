@@ -27,6 +27,7 @@ jobs:
           postgis: [3]
           release: [Debug, Release]
           os: [ubuntu-latest, ubuntu-22.04]
+          compiler: [ gcc-latest, g++-11, clang ]
 
     steps:
       - uses: actions/checkout@v5
@@ -46,6 +47,18 @@ jobs:
           sudo apt-get -y purge postgresql-*
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg-testing main ${{ matrix.psql }}" > /etc/apt/sources.list.d/pgdg.list'
           curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg >/dev/null
+
+      - name: Install compiler
+        id: install_cc
+        uses: rlalik/setup-cpp-compiler@master
+        with:
+          compiler: ${{ matrix.compiler }}
+
+      - name: Use compiler
+        shell: bash
+        env:
+          CC: ${{ steps.install_cc.outputs.cc }}
+          CXX: ${{ steps.install_cc.outputs.cxx }}
 
       - name: Install dependencies
         run: |
