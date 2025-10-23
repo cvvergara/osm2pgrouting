@@ -75,7 +75,7 @@ class OSMDocument {
     void AddNode(const Node &n);
     void AddWay(const Way &w);
     void AddRelation(const Relation &r);
-    void endOfFile() const;
+    void endOfFile();
 
     //! find node by using an ID
     bool has_node(int64_t nodeRefId) const;
@@ -101,6 +101,7 @@ class OSMDocument {
             return m_vm.count("addnodes") && (container.size() % m_chunk_size) == 0;
         }
 
+
     void wait_child() const;
 
     template <typename T>
@@ -109,14 +110,14 @@ class OSMDocument {
             if (osm_items.empty()) return;
 
             if (m_vm.count("addnodes")) {
+#if 0
                 auto pid = fork();
                 if (pid < 0) {
                     std::cerr << "Failed to fork" << endl;
                     exit(1);
                 }
-                if (pid > 0) {
-                    return;
-                }
+                if (pid > 0) return;
+#endif
             }
             auto residue = osm_items.size() % m_chunk_size;
             size_t start = residue? osm_items.size() - residue : osm_items.size() - m_chunk_size;
@@ -125,10 +126,12 @@ class OSMDocument {
             m_db_conn.export_osm(export_items, table);
 
             if (m_vm.count("addnodes")) {
+#if 0
                 /*
                  * finish the child process
                  */
                 _exit(0);
+#endif
             }
         }
 
@@ -142,6 +145,8 @@ class OSMDocument {
     Ways m_ways;
     //! parsed relations
     Relations  m_relations;
+    bool       m_relPending;
+    bool       m_waysPending;
 
     const Configuration& m_rConfig;
     po::variables_map m_vm;

@@ -1,3 +1,25 @@
+/*PGR-GNU*****************************************************************
+
+ Copyright (c) 2017 pgRouting developers
+ Mail: project@pgrouting.org
+
+ ------
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ GNU General Public License for more details.
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+********************************************************************PGR-GNU*/
+
+
+#include <unistd.h>
+
 #include "boost/lexical_cast.hpp"
 #include "database/table_management.h"
 #include "utilities/utilities.h"
@@ -105,7 +127,7 @@ Table::create() const {
 
 std::string
 Table::drop() const {
-    return "DROP TABLE IF EXISTS " + addSchema() + ";";
+    return "DROP TABLE IF EXISTS " + addSchema() + " CASCADE;";
 }
 
 
@@ -181,8 +203,12 @@ Tables::Tables(const  po::variables_map &vm) :
     m_osm_ways(osm_ways_config()),
     m_osm_relations(osm_relations_config())
 {
+    auto m_schema(vm["schema"].as<string>());
+    m_schema += (m_schema == "" ? "" :  ".");
     m_points_of_interest.add_sql(
-            "\nCREATE OR REPLACE FUNCTION osm2pgr_pois_update_part_of_topology()"
+            "\nCREATE OR REPLACE FUNCTION "
+            + m_schema
+            + "osm2pgr_pois_update_part_of_topology()"
             "\nRETURNS BIGINT AS"
             "\n$$"
             "\n-----------------------------------------------------------------"
@@ -202,13 +228,15 @@ Tables::Tables(const  po::variables_map &vm) :
             + "\nEND;"
             + "\n$$"
             + "\nLANGUAGE plpgsql;"
-            + "\nCOMMENT ON FUNCTION osm2pgr_pois_update_part_of_topology()"
-            + "\n  IS 'osm2pgRouting generated function';"
+            + "\nCOMMENT ON FUNCTION " + m_schema + "osm2pgr_pois_update_part_of_topology()"
+            + "\n  IS 'osm2pgrouting generated function';"
             );
 
 
     m_points_of_interest.add_sql(
-            "CREATE OR REPLACE FUNCTION osm2pgr_pois_update_not_part_of_topology(radius FLOAT, within FLOAT, tooFar BIGINT[])"
+            "CREATE OR REPLACE FUNCTION "
+            + m_schema
+            +"osm2pgr_pois_update_not_part_of_topology(radius FLOAT, within FLOAT, tooFar BIGINT[])"
             "\n RETURNS BIGINT AS"
             "\n $$"
             "\n-----------------------------------------------------------------"
@@ -246,7 +274,7 @@ Tables::Tables(const  po::variables_map &vm) :
             +"\n            WHERE ST_Intersects(the_geom, bufferWays)"
             +"\n        ),"
             +"\n        first AS ("
-            +"\n            SELECT   ways.id AS wid,"
+            +"\n            SELECT   ways.gid AS wid,"
             +"\n            source_osm, target_osm,"
             +"\n            ST_distance(pois.the_geom::geography,   ways.the_geom::geography) AS dist,"
             +"\n            pois.osm_id AS vid,"
@@ -278,16 +306,20 @@ Tables::Tables(const  po::variables_map &vm) :
             +"\n END;"
             +"\n $$"
             +"\n LANGUAGE plpgsql;"
+            +"\nCOMMENT ON FUNCTION " + m_schema + "osm2pgr_pois_update_not_part_of_topology(float,float,bigint[])"
+            + "\n  IS 'osm2pgrouting generated function';"
             );
 
     m_points_of_interest.add_sql(
-            "CREATE OR REPLACE FUNCTION osm2pgr_pois_find_side()"
+            "CREATE OR REPLACE FUNCTION "
+            + m_schema
+            +"osm2pgr_pois_find_side()"
             "\n RETURNS VOID AS"
             "\n $$"
             "\n WITH "
             "\n base AS ("
-            "\n     SELECT pid, w.id AS wid, w.the_geom AS wgeom, p.the_geom AS pgeom"
-            "\n     FROM " + pois().addSchema() + " AS p JOIN " + ways().addSchema() + " AS w ON (edge_id = w.id)"
+            "\n     SELECT pid, w.gid AS wid, w.the_geom AS wgeom, p.the_geom AS pgeom"
+            "\n     FROM " + pois().addSchema() + " AS p JOIN " + ways().addSchema() + " AS w ON (edge_id = w.gid)"
             + "\n     WHERE edge_id IS NOT NULL AND side IS NULL"
             + "\n ),"
 
@@ -330,27 +362,34 @@ Tables::Tables(const  po::variables_map &vm) :
             + "\n WHERE last.pid = " + pois().addSchema() + ".pid;"
             +"\n $$"
             +"\n LANGUAGE sql;"
+            +"\nCOMMENT ON FUNCTION " + m_schema + "osm2pgr_pois_find_side()"
+            + "\n  IS 'osm2pgrouting generated function';"
             );
 
     m_points_of_interest.add_sql(
-            "CREATE OR REPLACE FUNCTION osm2pgr_pois_new_geom()"
+            "CREATE OR REPLACE FUNCTION "
+            + m_schema
+            +"osm2pgr_pois_new_geom()"
             "\n RETURNS VOID AS"
             "\n $$"
             "\n UPDATE " + pois().addSchema()
             + "\n     SET new_geom = ST_LineInterpolatePoint(e.the_geom, fraction)"
-            + "\n         FROM " + ways().addSchema() + " AS e WHERE edge_id = id;"
+            + "\n         FROM " + ways().addSchema() + " AS e WHERE edge_id = gid;"
 
             "\n UPDATE " + pois().addSchema()
             + "\n     SET new_geom = the_geom"
             + "\n         WHERE vertex_id IS NOT NULL;"
             + "\n $$"
             + "\n LANGUAGE sql;"
+            +"\nCOMMENT ON FUNCTION " + m_schema + "osm2pgr_pois_new_geom()"
+            + "\n  IS 'osm2pgrouting generated function';"
             );
 
 
     m_points_of_interest.add_sql(
-            "\nCREATE OR REPLACE FUNCTION osm2pgr_pois_update(radius FLOAT, within FLOAT)"
-
+            "\nCREATE OR REPLACE FUNCTION "
+            + m_schema
+            +"osm2pgr_pois_update(radius FLOAT DEFAULT 200, within FLOAT DEFAULT 50)"
             "\n RETURNS BIGINT AS"
             "\n $$"
             "\n-----------------------------------------------------------------"
@@ -373,16 +412,16 @@ Tables::Tables(const  po::variables_map &vm) :
             "\n    factor FLOAT = 0.5;"
             "\n    tooFar BIGINT[];"
             "\n BEGIN"
-            "\n    total = osm2pgr_pois_update_part_of_topology();"
+            "\n    total = " + m_schema + "osm2pgr_pois_update_part_of_topology();"
 
             "\n    SELECT count(*) FROM " + pois().addSchema()
             +"\n    WHERE vertex_id IS NULL AND edge_id IS NULL"
             +"\n    INTO rec; "
 
             +"\n    FOR i IN 1..rec.count LOOP"
-            +"\n        curr_tot = osm2pgr_pois_update_not_part_of_topology(radius, within, tooFar);"
+            +"\n        curr_tot = " + m_schema + "osm2pgr_pois_update_not_part_of_topology(radius, within, tooFar);"
 
-            +"          RAISE NOTICE '%: Updated % points of Interest', i, curr_tot;"
+            +"\n        RAISE NOTICE '%: Updated % points of Interest', i, curr_tot;"
             +"\n        total := total + curr_tot;"
             +"\n        IF (curr_tot = 0) THEN"
             +"\n            SELECT pid FROM " + pois().addSchema()
@@ -398,13 +437,15 @@ Tables::Tables(const  po::variables_map &vm) :
             +"\n            EXIT WHEN rec.count = 0;"
             +"\n        END IF;"
             +"\n    END LOOP;"
-            +"\n    PERFORM osm2pgr_pois_find_side();"
-            +"\n    PERFORM osm2pgr_pois_new_geom();"
+            +"\n    PERFORM " + m_schema + "osm2pgr_pois_find_side();"
+            +"\n    PERFORM " + m_schema + "osm2pgr_pois_new_geom();"
 
             +"\n    return total;"
             +"\n END;"
             +"\n $$"
             +"\n LANGUAGE plpgsql;"
+            +"\nCOMMENT ON FUNCTION " + m_schema + "osm2pgr_pois_update(float, float)"
+            + "\n  IS 'osm2pgrouting generated function. " + m_schema + "osm2pgr_pois_update(radius, within)\nworking on areas of (radius)mts\nOn edges that are at least (within) mts of each POI';"
             );
 
 

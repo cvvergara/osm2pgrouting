@@ -94,11 +94,7 @@ class Export2DB {
              size_t i(0);
              for (auto it = items.begin(); it != items.end(); ++it, ++i) {
                  auto item = *it;
-                 if (m_vm.count("hstore")) {
-                     values[i] = tab_separated(item.values(osm_table.columns(), true));
-                 } else {
-                     values[i] = tab_separated(item.values(osm_table.columns(), false));
-                 }
+                 values[i] = tab_separated(item.values(osm_table.columns(), true));
              }
 
              export_osm(values, osm_table);
@@ -114,6 +110,7 @@ class Export2DB {
      void dropTables() const;
      void createFKeys() const;
      void process_pois() const;
+     bool exists(const std::string &table) const;
 
  private:
 

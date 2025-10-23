@@ -40,7 +40,7 @@ Way::Way(const char **atts) :
     Element(atts),
     m_maxspeed_forward(-1),
     m_maxspeed_backward(-1),
-    m_oneWay("UNKNOWN") { 
+    m_oneWay("UNKNOWN") {
     }
 
 Tag
@@ -176,7 +176,7 @@ Way::oneWay(const Tag &tag) {
     }
 
     // check false conditions: 0, no, false
-    if ((value == "no") || value == "false" || value == "1") {
+    if ((value == "no") || value == "false" || value == "0") {
         m_oneWay = "NO";
     }
 
@@ -201,20 +201,11 @@ Way::implied_oneWay(const Tag &tag) {
     if (m_oneWay != "UNKNOWN") return;
 
     if ((key == "junction" && value == "roundabout")
-            || (key == "highway"
-                && (value == "motorway"
-                    || value == "trunk") )) {
+            || (key == "highway" && value == "motorway")) {
         m_oneWay = "YES";
         return;
     }
 
-    if (key == "highway"
-            && (value == "primary"
-                || value == "secondary"
-                || value == "tertiary")) {
-        m_oneWay = "NO";
-        return;
-    }
 }
 
 #if 0
@@ -222,7 +213,7 @@ void
 Way::pedestrian(const std::string &key, const std::string &value) {
     // TODO(vicky) for 3.0
     // m_pedestrian("UNKNOWN") <-- the default in the constructor
-    if ((key == "sidewak" && value == "no")
+    if ((key == "sidewalk" && value == "no")
             || (key == "foot" && value == "no")) {
         m_pedestrian = "NO";
     }
@@ -332,7 +323,7 @@ Way::members_str() const {
     std::string node_list("");
     for (const auto &node_id : m_node_ids) {
         node_list += boost::lexical_cast<std::string>(node_id) + "=>\"type=>nd\",";
-    } 
+    }
     node_list[node_list.size() -1] = ' ';
 
     return node_list;
@@ -363,4 +354,3 @@ std::ostream& operator<<(std::ostream &os, const Way &way) {
 
 
 }  // namespace osm2pgr
-

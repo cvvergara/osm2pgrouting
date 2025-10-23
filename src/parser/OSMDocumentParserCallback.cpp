@@ -56,8 +56,10 @@ namespace osm2pgr {
 
 void
 OSMDocumentParserCallback::show_progress() {
+#if 0
     try {
         if (m_line == 0) return;
+        assert(m_rDocument.lines());
         if (m_rDocument.lines() == 0) return;
         if (((++m_line) % (m_rDocument.lines() / 100)) == 0) {
             print_progress(m_rDocument.lines(), m_line);
@@ -65,6 +67,7 @@ OSMDocumentParserCallback::show_progress() {
     } catch(...) {
         m_line = 1;
     }
+#endif
 }
 
 
@@ -145,7 +148,8 @@ OSMDocumentParserCallback::StartElement(
             auto tag = last_relation->add_tag(Tag(atts));
             m_rDocument.add_config(last_relation, tag);
         }
-        return;
+    }
+    if (strcmp(name, "osm") == 0) {
     }
 }
 
@@ -178,7 +182,6 @@ void OSMDocumentParserCallback::EndElement(const char* name) {
     }
 
     if (strcmp(name, "relation") == 0) {
-        m_rDocument.AddRelation(*last_relation);
         if (m_rDocument.config_has_tag(last_relation->tag_config())) {
             for (auto it = last_relation->way_refs().begin();  it != last_relation->way_refs().end(); ++it) {
                 auto way_id = *it;
@@ -196,7 +199,9 @@ void OSMDocumentParserCallback::EndElement(const char* name) {
                     }
                 }
             }
+            m_rDocument.AddRelation(*last_relation);
         }
+        // TODO add all other relations
         delete last_relation;
         return;
     } 

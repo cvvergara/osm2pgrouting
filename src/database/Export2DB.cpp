@@ -100,7 +100,7 @@ Export2DB::install_postGIS() const {
         Xaction.commit();
         return true;
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
+        // cerr << e.what() << std::endl;
     }
     return false;
 }
@@ -110,23 +110,48 @@ Export2DB::install_postGIS() const {
 
 
 // /////////////////////
-void Export2DB::createTables() const {
-    //  the following are particular of the file tables
+
+
+bool Export2DB::exists(const std::string &table) const {
     try {
         pqxx::connection db_conn(conninf);
         pqxx::work Xaction(db_conn);
 
-        Xaction.exec(vertices().create());
-        std::cout << "TABLE: " << vertices().addSchema() << " created ... OK.\n";
+        Xaction.exec(std::string("SELECT '") + table + "'::regclass");
+        std::cout << "TABLE: " << vertices().addSchema() << " already exists.\n";
+        return true;
+    } catch (const std::exception &e) {
+        return false;
+    }
+}
 
-        Xaction.exec(ways().create());
-        std::cout << "TABLE: " << ways().addSchema() << " created ... OK.\n";
 
-        Xaction.exec(pois().create());
-        std::cout << "TABLE: " << pois().addSchema() << " created ... OK.\n";
 
-        Xaction.exec(configuration().create());
-        std::cout << "TABLE: " << configuration().addSchema() << " created ... OK.\n";
+void Export2DB::createTables() const {
+    try {
+        pqxx::connection db_conn(conninf);
+        pqxx::work Xaction(db_conn);
+
+        if (!exists(vertices().addSchema())) {
+            Xaction.exec(vertices().create());
+            std::cout << "TABLE: " << vertices().addSchema() << " created ... OK.\n";
+        }
+
+        if (!exists(ways().addSchema())) {
+            Xaction.exec(ways().create());
+            std::cout << "TABLE: " << ways().addSchema() << " created ... OK.\n";
+        }
+
+        if (!exists(pois().addSchema())) {
+            Xaction.exec(pois().create());
+            std::cout << "TABLE: " << pois().addSchema() << " created ... OK.\n";
+        }
+
+        if (!exists(configuration().addSchema())) {
+            Xaction.exec(configuration().create());
+            std::cout << "TABLE: " << configuration().addSchema() << " created ... OK.\n";
+        }
+
 
         Xaction.commit();
     } catch (const std::exception &e) {
@@ -135,26 +160,34 @@ void Export2DB::createTables() const {
         exit(1);
     }
 
-    try {
-        pqxx::connection db_conn(conninf);
-        pqxx::work Xaction(db_conn);
-        /*
-         * optional tables
-         */
-        Xaction.exec(osm_nodes().create());
-        std::cout << "TABLE: " << osm_nodes().addSchema() << " created ... OK.\n";
+    if (m_vm.count("addnodes")) {
+        try {
+            pqxx::connection db_conn(conninf);
+            pqxx::work Xaction(db_conn);
+            /*
+             * optional tables
+             */
+            if (!exists(osm_nodes().addSchema())) {
+                Xaction.exec(osm_nodes().create());
+                std::cout << "TABLE: " << osm_nodes().addSchema() << " created ... OK.\n";
+            }
 
-        Xaction.exec(osm_ways().create());
-        std::cout << "TABLE: " << osm_ways().addSchema() << " created ... OK.\n";
+            if (!exists(osm_ways().addSchema())) {
+                Xaction.exec(osm_ways().create());
+                std::cout << "TABLE: " << osm_ways().addSchema() << " created ... OK.\n";
+            }
 
-        Xaction.exec(osm_relations().create());
-        std::cout << "TABLE: " << osm_relations().addSchema() << " created ... OK.\n";
+            if (!exists(osm_relations().addSchema())) {
+                Xaction.exec(osm_relations().create());
+                std::cout << "TABLE: " << osm_relations().addSchema() << " created ... OK.\n";
+        }
 
         Xaction.commit();
-    } catch (const std::exception &e) {
-        std::cerr <<  "\n" << e.what() << std::endl;
-        std::cerr <<  "WARNING: could not create osm-*  tables" << std::endl;
-        std::cerr <<  "   Insertions on osm_* tables are going to be ignored" << std::endl;
+        } catch (const std::exception &e) {
+            std::cerr <<  "\n" << e.what() << std::endl;
+            std::cerr <<  "WARNING: could not create osm-*  tables" << std::endl;
+            std::cerr <<  "   Insertions on osm_* tables are going to be ignored" << std::endl;
+        }
     }
 }
 
@@ -167,16 +200,16 @@ void Export2DB::dropTables() const {
         pqxx::work Xaction(db_conn);
 
         Xaction.exec(ways().drop());
-        std::cout << "TABLE: " << ways().addSchema() << " droped ... OK.\n";
+        std::cout << "TABLE: " << ways().addSchema() << " dropped ... OK.\n";
 
         Xaction.exec(vertices().drop());
-        std::cout << "TABLE: " << vertices().addSchema() << " droped ... OK.\n";
+        std::cout << "TABLE: " << vertices().addSchema() << " dropped ... OK.\n";
 
         Xaction.exec(pois().drop());
-        std::cout << "TABLE: " << pois().addSchema() << " droped ... OK.\n";
+        std::cout << "TABLE: " << pois().addSchema() << " dropped ... OK.\n";
 
         Xaction.exec(configuration().drop());
-        std::cout << "TABLE: " << configuration().addSchema() << " droped ... OK.\n";
+        std::cout << "TABLE: " << configuration().addSchema() << " dropped ... OK.\n";
 
         Xaction.commit();
     } catch (const std::exception &e) {
@@ -188,13 +221,13 @@ void Export2DB::dropTables() const {
         pqxx::connection db_conn(conninf);
         pqxx::work Xaction(db_conn);
         Xaction.exec(osm_nodes().drop());
-        std::cout << "TABLE: " << osm_nodes().addSchema() << " droped ... OK.\n";
+        std::cout << "TABLE: " << osm_nodes().addSchema() << " dropped ... OK.\n";
 
         Xaction.exec(osm_ways().drop());
-        std::cout << "TABLE: " << osm_ways().addSchema() << " droped ... OK.\n";
+        std::cout << "TABLE: " << osm_ways().addSchema() << " dropped ... OK.\n";
 
         Xaction.exec(osm_relations().drop());
-        std::cout << "TABLE: " << osm_relations().addSchema() << " droped ... OK.\n";
+        std::cout << "TABLE: " << osm_relations().addSchema() << " dropped ... OK.\n";
 
         Xaction.commit();
     } catch (const std::exception &e) {
@@ -336,7 +369,7 @@ void Export2DB::fill_source_target(
     std::string sql3(
             " UPDATE " + table +
             " SET  length_m = ST_length(geography(ST_Transform(the_geom, 4326))),"
-            "      coST_s = CASE "
+            "      cost_s = CASE "
             "           WHEN one_way = -1 THEN -ST_length(geography(ST_Transform(the_geom, 4326))) / (maxspeed_forward::float * 5.0 / 18.0)"
             "           ELSE ST_length(geography(ST_Transform(the_geom, 4326))) / (maxspeed_backward::float * 5.0 / 18.0)"
             "             END, "
@@ -344,7 +377,7 @@ void Export2DB::fill_source_target(
             "           WHEN one_way = 1 THEN -ST_length(geography(ST_Transform(the_geom, 4326))) / (maxspeed_backward::float * 5.0 / 18.0)"
             "           ELSE ST_length(geography(ST_Transform(the_geom, 4326))) / (maxspeed_backward::float * 5.0 / 18.0)"
             "             END "
-            " WHERE length_m IS NULL;");
+            " WHERE length_m IS NULL AND maxspeed_backward !=0 AND maxspeed_forward != 0;");
     Xaction.exec(sql3);
 }
 
@@ -541,7 +574,6 @@ Export2DB::execute(const std::string sql) const {
  *
  */
 void Export2DB::createFKeys() const {
-
     /*
      * configuration:
      */
@@ -558,7 +590,7 @@ void Export2DB::createFKeys() const {
     /*
      * Ways
      */
-    execute(ways().primary_key("id"));
+    execute(ways().primary_key("gid"));
     execute(ways().foreign_key("source", vertices(), "id"));
     execute(ways().foreign_key("target", vertices(), "id"));
     execute(ways().foreign_key("source_osm", vertices(), "osm_id"));
@@ -574,7 +606,11 @@ void Export2DB::createFKeys() const {
     execute(pois().unique("osm_id"));
 }
 
+
 void Export2DB::process_pois() const {
+    if (!m_vm.count("addnodes")) return;
+
+    std::cout << "\nAdding functions for processing Points of Interest ..." << endl;
     /* osm2pgr_pois_update_part_of_topology */
     execute(pois().sql(0));
 
@@ -594,7 +630,18 @@ void Export2DB::process_pois() const {
     /* osm2pgr_pois_update */
     execute(pois().sql(4));
 
+    std::cout << "\nTo process pointsOfInterest table:\n"
+#if 0 //TODO
+        << m_schema << (m_schema == "" ? "" :  ".")
+#endif
+        << "osm2pgr_pois_update(radius default 200, within default 50)\n"
+        "\n  - Using areas of (radius)mts on POIS"
+        "\n  - Using edges that are at least (within) mts of each POI"
+        "\nPOIS that do not have a closest edge is considered as too far\n";
+
+
     return;
+#if 0
     std::string array;
     int64_t total = 0;
     auto limit = get_val(
@@ -636,7 +683,6 @@ void Export2DB::process_pois() const {
 
     execute("SELECT osm2pgr_pois_find_side()");
     execute("SELECT osm2pgr_pois_new_geom()");
-#if 0
     execute(
             "\n WITH "
             "\n base AS ("
