@@ -22,7 +22,7 @@
 #include "parser/XMLParser.hpp"
 
 #include <cerrno>
-#include <string>
+#include <cstring>
 #include <iostream>
 #include <cstdio>
 
@@ -82,7 +82,7 @@ int XMLParser::Parse(XMLParserCallback& rCallback, const char* chFileName) {
     fclose(fp);
     ret = 0;
   } else {
-      std::cerr <<  "Error opening " << chFileName << ":" << strerror(errno);
+      std::cerr <<  "Error opening " << chFileName << ":" << std::strerror(errno);
   }
   return ret;  // return = 0 indicating success
 }
