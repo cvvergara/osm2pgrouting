@@ -1,6 +1,6 @@
-osm2pgRouting 2.3.9
+osm2pgRouting 3.0.0
 
-*
+* Homebrew: Add algorithm for std::transform
 
 osm2pgRouting 2.3.8
 
