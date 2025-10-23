@@ -54,12 +54,6 @@ jobs:
         with:
           compiler: ${{ matrix.compiler }}
 
-      - name: Use compiler
-        shell: bash
-        env:
-          CC: ${{ steps.install_cc.outputs.cc }}
-          CXX: ${{ steps.install_cc.outputs.cxx }}
-
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -76,8 +70,10 @@ jobs:
             # should be 7 on latest and 6 on 22.04
             apt-cache policy libpqxx-dev
 
-      - name: Configure for gcc
+      - name: Configure compiler
         run: |
+          echo "export CC=/usr/bin/${{ steps.install_cc.outputs.cc }}"
+          echo "export CXX=/usr/bin/${{ steps.install_cc.outputs.cxx }}"
           export PATH=/usr/lib/postgresql/${{ matrix.psql }}/bin:$PATH
           mkdir build
           cd build
