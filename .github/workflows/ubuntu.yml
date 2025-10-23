@@ -72,8 +72,8 @@ jobs:
 
       - name: Configure compiler
         run: |
-          echo "export CC=/usr/bin/${{ steps.install_cc.outputs.cc }}"
-          echo "export CXX=/usr/bin/${{ steps.install_cc.outputs.cxx }}"
+          export CC=/usr/bin/${{ steps.install_cc.outputs.cc }}
+          export CXX=/usr/bin/${{ steps.install_cc.outputs.cxx }}
           export PATH=/usr/lib/postgresql/${{ matrix.psql }}/bin:$PATH
           mkdir build
           cd build
