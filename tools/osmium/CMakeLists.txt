@@ -1,5 +1,4 @@
-PROJECT(getrestirction)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
 
 if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
     message(FATAL_ERROR "In-source builds not allowed.
@@ -7,6 +6,7 @@ if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
     You may need to remove CMakeCache.txt." )
 endif()
 
+PROJECT(getrestirction)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 SET(SHARE_DIR "/usr/share/getrestrictions")
 
@@ -22,15 +22,11 @@ endif()
 include_directories(SYSTEM ${OSMIUM_INCLUDE_DIRS})
 
 
-
-
-
-
 FIND_PACKAGE(Boost)
 if(Boost_INCLUDE_DIRS)
     message(STATUS "Boost headers were found here: ${Boost_INCLUDE_DIRS}")
 else(Boost_INCLUDE_DIRS)
-    message(FATAL_ERROR " Please check your Boost installation ") 
+    message(FATAL_ERROR " Please check your Boost installation ")
 endif(Boost_INCLUDE_DIRS)
 
 FIND_PACKAGE(Boost COMPONENTS program_options REQUIRED)
@@ -71,4 +67,3 @@ TARGET_LINK_LIBRARIES(getrestrictions
 INSTALL(TARGETS getrestrictions
     RUNTIME DESTINATION "/usr/bin"
     )
-

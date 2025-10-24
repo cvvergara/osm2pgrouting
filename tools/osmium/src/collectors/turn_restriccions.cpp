@@ -105,13 +105,13 @@ bool MyRelCollector::keep_member(
 std::string MyRelCollector::attributes_str(
         const osmium::Relation& relation) const {
     //std::cout <<  "my function name is: " << __FUNCTION__ << "\n";
-    std::string user = add_quotes(std::string(relation.user()));
+    std::string user = add_quotes(std::string(relation.user()), true);
     std::string str("");
     str += "version=>" + std::to_string(relation.version()) + ",";
     str += "timestamp=>" + relation.timestamp().to_iso() + ",";
     str += "changeset=>" + std::to_string(relation.changeset()) + ",";
     str += "uid=>" + std::to_string(relation.uid()) + ",";
-    str += "user=>" + add_quotes(std::string(relation.user()));
+    str += "user=>" + add_quotes(std::string(relation.user()), true);
     return str;
 }
 
@@ -120,7 +120,7 @@ std::string MyRelCollector::tags_str(
         const osmium::Relation& relation) const {
     std::string str("");
     for (const osmium::Tag& tag : relation.tags()) {
-        str += std::string(tag.key()) + "=>" +  add_quotes(tag.value()) + ',';
+        str += std::string(tag.key()) + "=>" +  add_quotes(tag.value(), true) + ',';
     }
     str[str.size()-1] = ' ';
     return str;
@@ -199,7 +199,7 @@ void MyRelCollector::complete_relation(
         }
     }
 #if 0
-    std::cout 
+    std::cout
         << relation.id() << "\t"
         << pg_null_array(from) << "\t"
         << pg_null_array(to) << "\t"

@@ -25,6 +25,7 @@
 
 #include "utilities/quotes_handling.h"
 #include <string>
+#include <sstream>
 
 std::string
 add_quotes(const std::string str, bool force) {
