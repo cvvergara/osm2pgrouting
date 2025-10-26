@@ -58,9 +58,62 @@ struct NodeCounter : public osmium::handler::Handler
 };
 
 typedef boost::property<boost::vertex_name_t, int64_t> VertexProperty;
-typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, VertexProperty> Graph;
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, VertexProperty> Graph;
+typedef boost::graph_traits<Graph>::vertex_descriptor V;
+typedef boost::graph_traits<Graph>::edge_descriptor E;
+std::map<int64_t, V> idx_map;
 
 Graph g;
+
+void print_graph(Graph const& g)
+{
+    auto vs = boost::vertices(g);
+    for (auto vit = vs.first; vit != vs.second; ++vit) {
+        auto neighbors = boost::adjacent_vertices(*vit, g);
+        for (auto nit = neighbors.first; nit != neighbors.second; ++nit)
+            std::cout << "{" << *vit << "," << *nit << "}" << ", ";
+    }
+    std::cout << "\n";
+}
+
+void contract_edge(V u, Graph& g)
+{
+  std::cout << "\n" << __PRETTY_FUNCTION__ << " " << u << "\t";
+  std::cout << "u: " << u << " d: " << boost::out_degree(u, g) << "\n";
+  if (boost::out_degree(u, g) == 0) return;
+  auto  u_outEdges = boost::out_edges(u, g);
+
+  for (auto iter = u_outEdges.first; iter != u_outEdges.second; ++iter) {
+    auto e1 = *iter;
+    auto v = boost::target(e1, g);
+    std::cout << "   v:" << v << " d: " << boost::out_degree(u, g) << "\n";
+    if (boost::out_degree(v, g) != 1) continue;
+    auto  v_outEdges = boost::out_edges(v, g);
+    auto e2 = *v_outEdges.first;
+    auto w = boost::target(e2, g);
+
+    std::cout << "u -> v -> w: " << u <<"->"<<v<<"->" << w <<"\n";
+#if 0
+    std::cout << "\n before adding edge"; print_graph(g);
+#endif
+    add_edge(u, w, g);
+    boost::remove_edge(e1, g);
+    boost::remove_edge(e2, g);
+#if 0
+    std::cout << "\n after adding edge"; print_graph(g);
+#endif
+    break;
+  }
+}
+
+void contract_vertices(Graph& g)
+{
+  boost::graph_traits<Graph>::vertex_iterator vi, vend;
+  std::tie(vi, vend) = boost::vertices(g);
+  for (auto iter = vi; iter != vend; ++iter) {
+    contract_edge(boost::vertex(*iter, g), g);
+  }
+}
 
 class BreakLines : public osmium::handler::Handler {
 osmium::memory::Buffer& m_buffer;
@@ -125,26 +178,56 @@ void way(const osmium::Way& way) {
   osmium::Way& new_way = m_buffer.get<osmium::Way>(0);
 
   std::cout << "original way " << way.id() << ": ";
+#if 0
   for (const auto& n : way.nodes()) {
     std::cout << n.ref() << "," ;
   }
   std::cout << "\n";
+#endif
 
 #if 0
   // Print vertices
   std::cout << "Vertices:" << std::endl;
 #endif
+
   auto prev_n = way.nodes().begin();
-  auto prev = boost::add_vertex(VertexProperty{prev_n->ref()}, g);
-  for (const auto& n : way.nodes()) {
-    auto curr = boost::add_vertex(VertexProperty{n.ref()}, g);
+  auto prev = (idx_map.find(prev_n->ref()) == idx_map.end())?
+    boost::add_vertex(VertexProperty{prev_n->ref()}, g) :
+    idx_map[prev_n->ref()];
+  idx_map[prev_n->ref()] = prev;
+
+
+
 #if 0
-    std::cout << n.ref() << "," << curr << std::endl;
+  for (auto const& addition : edges) {
+        if (g.vertex(addition.from) == g.null_vertex())
+            std::cout << "source vertex (" << addition.from << ") not present\n";
+        else if (g.vertex(addition.to) == g.null_vertex())
+            std::cout << "target vertex (" << addition.to << ") not present\n";
+        else {
+            auto insertion = add_edge_by_label(addition.from, addition.to, g);
+            std::cout << "Edge: (" << addition.from << " -> " << addition.to << ") "
+                << (insertion.second? "inserted":"already exists")
+                << "\n";
+        }
+    }
+#endif
+  for (const auto& n : way.nodes()) {
+
+    auto curr = (idx_map.find(n.ref()) == idx_map.end())?
+      boost::add_vertex(VertexProperty{n.ref()}, g) :
+      idx_map[n.ref()];
+    idx_map[n.ref()] = curr;
+
+#if 0
     boost::property_map<Graph, boost::vertex_name_t>::type idx = get(boost::vertex_name, g);
+    std::cout << n.ref() << "," << curr << std::endl;
     std::cout << curr << "," << idx[curr] << std::endl;
 #endif
-    if (prev_n == &n) continue;
+
+    if (&n == way.nodes().begin()) continue;
     auto eid = add_edge(prev, curr, g);
+    prev = curr;
 #if 0
     std::cout << "the edge" << eid.first  << std::endl;
     std::cout << idx[boost::source(eid.first, g)] << " -> " << idx[boost::target(eid.first, g)] << std::endl;
@@ -152,11 +235,13 @@ void way(const osmium::Way& way) {
   }
   std::cout << "\n";
 
+#if 0
   std::cout << "     new way " << way.id() << ": ";
   for (const auto& n : new_way.nodes()) {
     std::cout << n.ref() << ",";
   }
   std::cout << "\n";
+#endif
 };
 };
 
@@ -296,12 +381,17 @@ int main(int argc, char *argv[]) {
   NodeCounter nchandler;
   BreakLines breaklines(buffer);
   osmium::apply(reader, location_handler, nchandler, breaklines);
+
+#if 0
   for (const auto &e : nodeSet) {
     if (e.second == 1) continue;
     std::cout << e.first << " " << e.second << "\n";
   }
+#endif
 
   reader.close();
+
+  contract_vertices(g);
 
   // Print vertices
   std::cout << "Vertices:" << std::endl;
