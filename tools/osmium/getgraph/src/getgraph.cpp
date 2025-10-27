@@ -1,22 +1,23 @@
 #include <iostream>
+#include <iomanip>
 
 #include <osmium/handler.hpp>
-#include <osmium/io/any_input.hpp>
 #include <osmium/osm/node.hpp>
 #include <osmium/osm/way.hpp>
+#include <osmium/io/any_input.hpp>
 #include <osmium/visitor.hpp>
+#include <osmium/index/map/sparse_mem_array.hpp>
+#include <osmium/handler/node_locations_for_ways.hpp>
 
-class Nid_Widtags : public osmium::handler::Handler {
+
+class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
 public:
     void way(const osmium::Way& way) {
         std::cout << "way " << way.id() << '\n';
-        for (const osmium::Tag& t : way.tags()) {
-            std::cout << t.key() << "=" << t.value() << '\n';
+        for (const auto& n : way.nodes()) {
+            std::cout << std::setprecision (15) << n.ref() << ": " << n.lon() << ", " << n.lat() << '\n';
+            node_count[n.ref()]++;
         }
-    }
-
-    void node(const osmium::Node& node) {
-        std::cout << "node " << node.id() << '\n';
     }
 };
 
@@ -39,7 +40,15 @@ int main(int argc, char *argv[]) {
   osmium::io::Reader reader{in_file_name, otypes};
 
 
-  Nid_Widtags handler;
-  osmium::apply(reader, handler);
-  reader.close();
+
+    namespace map = osmium::index::map;
+    using index_type = map::SparseMemArray<osmium::unsigned_object_id_type, osmium::Location>;
+    using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
+
+    index_type index;
+    location_handler_type location_handler{index};
+
+    Wayid_NodeLocationsofWays handler;
+    osmium::apply(reader, location_handler, handler);
+    reader.close();
 }
