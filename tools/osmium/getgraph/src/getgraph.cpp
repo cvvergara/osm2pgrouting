@@ -12,9 +12,15 @@
 std::map<int64_t, size_t> node_count;
 
 class NodeCount : public osmium::handler::Handler {
+  bool nfirst = true;
+  bool wfirst = true;
   public:
     void node(const osmium::Node& node) {
 
+      if (nfirst) {
+        std::cout << "COPY osm_nodes (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+        nfirst = false;
+      }
       const osmium::TagList& tags = node.tags();
       if (true /* --addnodes */) {
 
@@ -25,16 +31,11 @@ class NodeCount : public osmium::handler::Handler {
         const osmium::Location& location = node.location();
         if (location.valid()) {
 
-          const char* name = tags["name"];
-          if (name) {
-            std::cout <<  std::setprecision (15) << "INSERT INTO osm_nodes (osm_id, name, geom) VALUES ("
-              << node.id() << ", '" << name << "'"
-              << ", ST_SetSRID(ST_Point(" << location.lon() << "," << location.lat() << "), 4326));\n";
-          } else {
-            std::cout <<  std::setprecision (15) << "INSERT INTO osm_nodes (osm_id, geom) VALUES ("
-              << node.id()
-              << ", ST_SetSRID(ST_Point(" << location.lon() << "," << location.lat() << "), 4326));\n";
-          }
+          const char* nameptr = tags["name"];
+          std::string name = nameptr? std::string("'") + nameptr + std::string("'") : "NULL";
+          std::cout <<  std::setprecision (15)
+            << node.id() << "\t" << name
+            << "\t\"POINT(" << location.lon() << " " << location.lat() << ")\"\n";
         } else {
           std::cout << "Found invalid location at " << node.id() << "\n";
         }
@@ -48,8 +49,17 @@ class NodeCount : public osmium::handler::Handler {
     void way(const osmium::Way& way) {
       const osmium::TagList& tags = way.tags();
 
+      if (wfirst) {
+        std::cout << "\\.\n";
+#if 0
+        std::cout << "COPY osm_nodes (osm_id, name, geom) FROM stdin WITH DELIMITER ';' NULL 'NULL' CSV;";
+#endif
+        wfirst = false;
+      }
+
       for (const auto &n : way.nodes()) {
 
+#if 0
         /*
          * fill up osm_ways
          */
@@ -71,6 +81,7 @@ class NodeCount : public osmium::handler::Handler {
               << ", ST_SetSRID(ST_MakeLine(" << points << "), 4326));\n";
           }
         }
+#endif
 
         /*
          * Count nodes to detect where to split
@@ -128,7 +139,6 @@ int main(int argc, char *argv[]) {
    *  the input file
    */
   std::string in_file_name = argv[1];
-  std::cout << "processing: " << in_file_name << "\n";
 
   auto otypes = osmium::osm_entity_bits::node | osmium::osm_entity_bits::way;
   osmium::io::Reader reader{in_file_name, otypes};
