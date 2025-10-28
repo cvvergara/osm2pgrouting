@@ -12,16 +12,17 @@
 std::map<int64_t, size_t> node_count;
 
 class NodeCount : public osmium::handler::Handler {
-  bool nfirst = true;
-  bool wfirst = true;
   public:
     void node(const osmium::Node& node) {
+      const osmium::TagList& tags = node.tags();
+      const char* highway = tags["highway"];
+      const char* nameptr = tags["name"];
 
+#ifdef ADDNODES
       if (nfirst) {
         std::cout << "COPY osm_nodes (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
         nfirst = false;
       }
-      const osmium::TagList& tags = node.tags();
       if (true /* --addnodes */) {
 
         /* hint on how to add the tags of the nodes
@@ -31,7 +32,6 @@ class NodeCount : public osmium::handler::Handler {
         const osmium::Location& location = node.location();
         if (location.valid()) {
 
-          const char* nameptr = tags["name"];
           std::string name = nameptr? std::string("'") + nameptr + std::string("'") : "NULL";
           std::cout <<  std::setprecision (15)
             << node.id() << "\t" << name
@@ -40,89 +40,150 @@ class NodeCount : public osmium::handler::Handler {
           std::cout << "Found invalid location at " << node.id() << "\n";
         }
       }
+#endif
 
-      const char* highway = tags["highway"];
       if (!highway) return;
       if (!node.tags().empty()) node_count[node.id()]++;
     }
 
+
     void way(const osmium::Way& way) {
       const osmium::TagList& tags = way.tags();
+      const char* nameptr = tags["name"];
+      std::string name = nameptr? std::string("'") + nameptr + std::string("'") : "NULL";
+      const char* highway = way.tags()["highway"];
 
+#ifdef ADDNODES
       if (wfirst) {
         std::cout << "\\.\n";
-#if 0
-        std::cout << "COPY osm_nodes (osm_id, name, geom) FROM stdin WITH DELIMITER ';' NULL 'NULL' CSV;";
-#endif
+        std::cout << "COPY osm_ways (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
         wfirst = false;
       }
+#endif
 
+      std::string points = "";
       for (const auto &n : way.nodes()) {
-
-#if 0
+#ifdef ADDNODES
         /*
-         * fill up osm_ways
+         * get the points of the way
          */
         if (true /* --addnodes */) {
-          std::string points;
-          for (const auto& n : way.nodes()) {
-            points += points.empty()? "" : ",";
-            points += "ST_Point(" + std::to_string(n.lon()) + "," + std::to_string(n.lat()) + ')';
-          }
-
-          const char* name = tags["name"];
-          if (name) {
-            std::cout << "INSERT INTO osm_ways (osm_id, name, geom) VALUES ("
-              << way.id() << ", '" << name << "'"
-              << ", ST_SetSRID(ST_MakeLine(ARRAY[" << points << "]), 4326));\n";
-          } else {
-            std::cout << "INSERT INTO osm_ways (osm_id, geom) VALUES ("
-              << way.id()
-              << ", ST_SetSRID(ST_MakeLine(" << points << "), 4326));\n";
-          }
+          points += points.empty()? "" : ",";
+          points += std::to_string(n.lon()) + " " + std::to_string(n.lat());
         }
 #endif
 
         /*
          * Count nodes to detect where to split
          */
-        const char* highway = way.tags()["highway"];
         if (highway) {
           node_count[n.ref()]++;
         }
       }
+
+#ifdef ADDNODES
+      if (true /* --addnodes */) {
+        std::cout << way.id() << "\t" << name
+          << "\t\"LINESTRING(" << points << ")\"\n";
+      }
+#endif
     }
+  private:
+    bool nfirst = true;
+    bool wfirst = true;
 };
 
 class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
+  bool wfirst = true;
   public:
     void way(const osmium::Way& way) {
-      std::cout << "\nway " << way.id() << '\n';
+      const osmium::TagList& tags = way.tags();
+      const char* nameptr = tags["name"];
+      std::string name = nameptr? std::string("'") + nameptr + std::string("'") : "NULL";
+      const char* highway = way.tags()["highway"];
+      if (!highway) return;
+
+      if (wfirst) {
+        std::cout << "\\.\n";
+        std::cout << "COPY ways (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+        wfirst = false;
+      }
+
+#if 0
+      std::cout << "\nall way's nodes " << way.id() << '\n';
       for (const auto& n : way.nodes()) {
         std::cout << n.ref() << ", ";
       }
       std::cout << "\n";
+#endif
 
+      bool newBroken = true;
+      std::string points = "";
+      std::string point = "";
+      size_t psize = 0;
       for (const auto& n : way.nodes()) {
-        const char* highway = way.tags()["highway"];
-        if (!highway) continue;
-        if (node_count.find(n.ref()) == node_count.end()) {
-          /*
-           * not found
-           */
-          std::cout << n.ref() << ", ";
-        } else {
-          /*
-           * found
-           */
-          if (n.ref() != way.nodes().begin()->ref()) std::cout << n.ref() << "\n";
-          std::cout << n.ref() << ", ";
-        }
+        /*
+         * the point's coordinates
+         */
+        std::ostringstream oss;
+        oss  << std::setprecision(15) << n.lon() << " " << n.lat();
+        point = oss.str();
+
+        /*
+         * add to the list of points
+         */
+        points += points.empty()? "" : ",";
+        points += point;
+        ++psize;
 #if 0
-        std::cout << std::setprecision (15) << n.ref() << ": " << n.lon() << ", " << n.lat() << '\n';
+        std::cout << "NEXT: " << points << "\n";
+#endif
+
+        /*
+         * When its the first node of the way:
+         * - newBroken == true
+         * - psize == 1
+         * Regardless if it is in node_count or not:
+         * - continue
+         * postcond:
+         * - newBroken == false
+         */
+        if (newBroken && psize == 1 ) {
+#if 0
+          std::cout << "newBroken && psize == 1: " << points << "\n";
+#endif
+          newBroken = false;
+          continue;
+        }
+
+        if (!(node_count.find(n.ref()) == node_count.end())) {
+          /*
+           * found a node in the node_count list
+           * - INSERT because it's the last node of the edge
+           */
+          std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
+
+#if 0
+          std::cout << "INSERT because it's the last node of the edge\n" << points << "\n";
+#endif
+          /*
+           * It's the beginning of the next edge
+           */
+          points = point;
+          psize = 1;
+        }
+      }
+
+      /*
+       * When its the last node of the way:
+       * - INSERT WHEN psize != 1: because it has more than one node
+       */
+      if (psize != 1) {
+        std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
+#if 0
+        std::cout << "INSERT WHEN psize != 1\n" << points << '\n';
 #endif
       }
-      std::cout << "\n----\n";
     }
 };
 
@@ -154,6 +215,15 @@ int main(int argc, char *argv[]) {
 
   osmium::apply(reader, location_handler, node_count_handler);
   reader.close();
+
+#ifdef ADDNODES
+  /*
+   * This is the end of the osm_ways COPY
+   */
+  if (true /* --addnodes */) {
+    std::cout << "\\.\n";
+  }
+#endif
 
   /* nodes that are in more than one way */
   std::cout << "total nodes: " << node_count.size();
