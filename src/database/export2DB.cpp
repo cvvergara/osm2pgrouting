@@ -63,11 +63,11 @@ int Export2DB::connect() {
     try {
         pqxx::connection db_conn(conninf);
         pqxx::work Xaction(db_conn);
-        cout << "connection success"<< endl;
+        std::cout << "connection success"<< std::endl;
         return 0;
 
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return 1;
     }
 }
@@ -83,7 +83,7 @@ Export2DB::has_extension(const std::string &name) const {
         return result.size() == 1;
 
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return false;
     }
 }
@@ -100,7 +100,7 @@ Export2DB::install_postGIS() const {
         Xaction.commit();
         return true;
     } catch (const std::exception &e) {
-        // cerr << e.what() << std::endl;
+        // std::cerr << e.what() << std::endl;
     }
     return false;
 }
@@ -215,8 +215,8 @@ void Export2DB::dropTables() const {
 
         Xaction.commit();
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
-        cerr << "ROLLBACK applied";
+        std::cerr << e.what() << std::endl;
+        std::cerr << "ROLLBACK applied";
     }
 
     try {
@@ -233,7 +233,7 @@ void Export2DB::dropTables() const {
 
         Xaction.commit();
     } catch (const std::exception &e) {
-        cerr << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
     }
 }
 
@@ -647,7 +647,7 @@ void Export2DB::createFKeys() const {
 void Export2DB::process_pois() const {
     if (!m_vm.count("addnodes")) return;
 
-    std::cout << "\nAdding functions for processing Points of Interest ..." << endl;
+    std::cout << "\nAdding functions for processing Points of Interest ..." << std::endl;
     /* osm2pgr_pois_update_part_of_topology */
     execute(pois().sql(0));
 

@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
             notify(vm);
         }
 
-        catch(exception &ex) {
+        catch(std::exception &ex) {
             std::cout << ex.what() << "\n";
             std::cout << od_desc << "\n";
             return 0;
@@ -117,8 +117,8 @@ int main(int argc, char* argv[]) {
 #endif
         process_command_line(vm);
 
-        auto dataFile(vm["file"].as<string>());
-        auto confFile(vm["conf"].as<string>());
+        auto dataFile(vm["file"].as<std::string>());
+        auto confFile(vm["conf"].as<std::string>());
         auto clean(vm.count("clean"));
         auto no_index(vm.count("no-index"));
 
@@ -130,28 +130,28 @@ int main(int argc, char* argv[]) {
                     + " port=" + vm["port"].as<std::string>()
                     + " password=" + vm["password"].as<std::string>());
         try {
-            cout << "Testing database connection: "
+            std::cout << "Testing database connection: "
                 << vm["dbname"].as<std::string>()
-                << endl;
+                << std::endl;
             pqxx::connection C(connection_str);
             if (C.is_open()) {
-                cout << "database connection successful: " << C.dbname() << endl;
+                std::cout << "database connection successful: " << C.dbname() << std::endl;
             } else {
-                cout << "Can't open database" << endl;
+                std::cout << "Can't open database" << std::endl;
                 return 1;
             }
 #ifdef PQXX_DISCONNECT
             C.disconnect ();
 #endif
         }catch (const std::exception &e){
-            cerr << e.what() << std::endl;
+            std::cerr << e.what() << std::endl;
             return 1;
         }
 
         /*
          * preparing the databasse
          */
-        std::cout << "Connecting to the database"  << endl;
+        std::cout << "Connecting to the database"  << std::endl;
         osm2pgr::Export2DB dbConnection(vm, connection_str);
         if (dbConnection.connect() == 1) {
             return 1;
@@ -174,28 +174,28 @@ int main(int argc, char* argv[]) {
         }
 
         if (clean) {
-            std::cout << "\nDropping tables..." << endl;
+            std::cout << "\nDropping tables..." << std::endl;
             dbConnection.dropTables();
         }
-        std::cout << "\nCreating tables..." << endl;
+        std::cout << "\nCreating tables..." << std::endl;
         dbConnection.createTables();
 
         /*
          * End: preparing the databasse
          */
 
-        std::cout << "Opening configuration file: " << confFile.c_str() << endl;
+        std::cout << "Opening configuration file: " << confFile.c_str() << std::endl;
         osm2pgr::Configuration config;
         osm2pgr::ConfigurationParserCallback cCallback(config);
 
 
-        std::cout << "    Parsing configuration\n" << endl;
+        std::cout << "    Parsing configuration\n" << std::endl;
         xml::XMLParser parser;
         int ret = parser.Parse(cCallback, confFile.c_str());
         if (ret != 0) {
-            cout << "Failed to open / parse config file\n"
+            std::cout << "Failed to open / parse config file\n"
                 << confFile.c_str()
-                << endl;
+                << std::endl;
             return 1;
         }
         std::cout << "Exporting configuration ...\n";
@@ -212,20 +212,20 @@ int main(int argc, char* argv[]) {
             << dataFile
             << "\ttotal lines: "
             << total_lines
-            << endl;
+            << std::endl;
 #else
         size_t total_lines = 0;
 #endif
         osm2pgr::OSMDocument document(config, vm, dbConnection, total_lines);
         osm2pgr::OSMDocumentParserCallback callback(document);
 
-        std::cout << "    Parsing data\n" << endl;
+        std::cout << "    Parsing data\n" << std::endl;
         ret = parser.Parse(callback, dataFile.c_str());
         if (ret != 0) {
-            cerr << "Failed to open / parse data file " << dataFile << endl;
+            std::cerr << "Failed to open / parse data file " << dataFile << std::endl;
             return 1;
         }
-        std::cout << "    Finish Parsing data\n" << endl;
+        std::cout << "    Finish Parsing data\n" << std::endl;
         if (document.nodeErrs()) {
             std::cerr << "******\nNOTICE:  Found " << document.nodeErrs() << " node references with no <node ... >\n*****";
         }
@@ -233,26 +233,26 @@ int main(int argc, char* argv[]) {
         //############# Export2DB
         {
 
-            std::cout << "Adding auxiliary tables to database..." << endl;
+            std::cout << "Adding auxiliary tables to database..." << std::endl;
 
 
-            std::cout << "\nExport Ways ..." << endl;
+            std::cout << "\nExport Ways ..." << std::endl;
             dbConnection.exportWays(document.ways(), config);
 
             if (!no_index) {
-                std::cout << "\nCreating indexes ..." << endl;
+                std::cout << "\nCreating indexes ..." << std::endl;
                 dbConnection.createFKeys();
             }
 
-            std::cout << "\nProcessing Points of Interest ..." << endl;
+            std::cout << "\nProcessing Points of Interest ..." << std::endl;
             dbConnection.process_pois();
 
         }
 
 
-        std::cout << "#########################" << endl;
+        std::cout << "#########################" << std::endl;
 
-        std::cout << "size of streets: " << document.ways().size() << endl;
+        std::cout << "size of streets: " << document.ways().size() << std::endl;
 
 #ifdef WITH_TIME
         clock_t end = clock();
@@ -276,20 +276,20 @@ int main(int argc, char* argv[]) {
         std::cout << "User CPU time: -> " << elapsed_secs << " seconds\n";
 #endif
 
-        std::cout << "#########################" << endl;
+        std::cout << "#########################" << std::endl;
 
         exit(0);
     }
-    catch (exception &e) {
-        std::cout << e.what() << endl;
+    catch (std::exception &e) {
+        std::cout << e.what() << std::endl;
         return 1;
     }
-    catch (string &e) {
-        std::cout << e << endl;
+    catch (std::string &e) {
+        std::cout << e << std::endl;
         return 1;
     }
     catch (...) {
-        std::cout << "Terminating" << endl;
+        std::cout << "Terminating" << std::endl;
         return 1;
     }
 }

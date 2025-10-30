@@ -203,7 +203,7 @@ Tables::Tables(const  po::variables_map &vm) :
     m_osm_ways(osm_ways_config()),
     m_osm_relations(osm_relations_config())
 {
-    auto m_schema(vm["schema"].as<string>());
+    auto m_schema(vm["schema"].as<std::string>());
     m_schema += (m_schema == "" ? "" :  ".");
     m_points_of_interest.add_sql(
             "\nCREATE OR REPLACE FUNCTION "

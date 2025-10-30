@@ -1,6 +1,5 @@
 Checks: >
     google-*,
-    -google-build-using-namespace,
     -google-global-names-in-headers,
     clang-analyzer-*,
     clang-diagnostic-*,
