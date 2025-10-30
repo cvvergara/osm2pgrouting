@@ -189,7 +189,7 @@ OSMDocument::add_node(Way &way, const char **atts) {
     way.add_node(node_id);
 
 #if 1
-    // TODO leave this when splitting
+    // TODO(unknown) leave this when splitting
     if (!has_node(node_id)) {
         ++m_nodeErrs;
     } else {

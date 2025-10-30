@@ -55,7 +55,7 @@ Tables::osm_nodes_config() const {
                     : "")),
 
             /* other columns */
-            // TODO get from the configuration maybe this task is to be done on the configuration*/
+            // TODO(unknown) get from the configuration maybe this task is to be done on the configuration*/
             ", tag_name TEXT"
                 ", tag_value TEXT"
                 ", name TEXT ",
@@ -66,7 +66,7 @@ Tables::osm_nodes_config() const {
     std::vector<std::string> columns;
     columns.push_back("osm_id");
     columns.push_back("geom");
-    // TODO get from the configuration
+    // TODO(unknown) get from the configuration
     columns.push_back("tag_name");
     columns.push_back("tag_value");
     columns.push_back("name");

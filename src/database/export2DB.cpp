@@ -317,7 +317,7 @@ Export2DB::export_osm(
         Xaction.commit();
     } catch (const std::exception &e) {
         std::cerr <<  "\n" << e.what() << std::endl;
-        std::cerr << "While exporting to " << table.addSchema() << " TODO insert one by one skip the guilty one\n";
+        std::cerr << "While exporting to " << table.addSchema() << " TODO(unknown) insert one by one skip the guilty one\n";
     }
 }
 
@@ -668,7 +668,8 @@ void Export2DB::process_pois() const {
     execute(pois().sql(4));
 
     std::cout << "\nTo process pointsOfInterest table:\n"
-#if 0 //TODO
+#if 0
+        // TODO(unknown)
         << m_schema << (m_schema == "" ? "" :  ".")
 #endif
         << "osm2pgr_pois_update(radius default 200, within default 50)\n"

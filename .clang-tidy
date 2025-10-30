@@ -1,9 +1,7 @@
 Checks: >
     google-*,
-    -google-readability-casting,
     -google-build-using-namespace,
     -google-global-names-in-headers,
-    -google-readability-todo,
     clang-analyzer-*,
     clang-diagnostic-*,
     cppcoreguidelines-*,

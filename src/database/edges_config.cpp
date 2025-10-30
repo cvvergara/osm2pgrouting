@@ -114,7 +114,7 @@ Tables::ways_config() const {
 
 
 #if 0
-    // TODO get from the configuration
+    // TODO(unknown) get from the configuration
     columns.push_back("tag_name");
     columns.push_back("tag_value");
 

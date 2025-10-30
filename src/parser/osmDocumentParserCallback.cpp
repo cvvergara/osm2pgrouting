@@ -201,7 +201,7 @@ void OSMDocumentParserCallback::EndElement(const char* name) {
             }
             m_rDocument.AddRelation(*last_relation);
         }
-        // TODO add all other relations
+        // TODO(unknown) add all other relations
         delete last_relation;
         return;
     }

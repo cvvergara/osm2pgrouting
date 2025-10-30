@@ -56,7 +56,7 @@ Tables::osm_ways_config() const {
                     : "")),
 
             /* other columns */
-            /* TODO get from the configuration maybe this task is to be done on the configuration*/
+            /* TODO(unknown) get from the configuration maybe this task is to be done on the configuration*/
             std::string(
                     ", tag_name TEXT"
                     ", tag_value TEXT"
@@ -70,7 +70,7 @@ Tables::osm_ways_config() const {
     std::vector<std::string> columns;
     columns.push_back("osm_id");
     columns.push_back("members");
-    // TODO get from the configuration
+    // TODO(unknown) get from the configuration
     columns.push_back("tag_name");
     columns.push_back("tag_value");
     columns.push_back("name");
