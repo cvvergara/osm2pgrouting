@@ -20,7 +20,7 @@
 /** @file **/
 #pragma once
 #include <string>
-#include "utilities/prog_options.h"
+#include "utilities/prog_options.hpp"
 
 namespace osm2pgr {
 
@@ -103,16 +103,16 @@ class Table {
 
 class Tables {
     public:
-        Tables(const po::variables_map &vm);
+        explicit Tables(const po::variables_map &vm);
 
         const Table& get_table(const std::string &name) const {
-            if (name == "osm_nodes") return osm_nodes();
-            else if (name == "osm_ways") return osm_ways();
-            else if (name == "osm_relations") return osm_relations();
-            else if (name == "configuration") return configuration();
-            else if (name == "pointsofinterest") return pois();
-            else if (name == "ways") return ways();
-            else return vertices();
+            if (name == "osm_nodes") {return osm_nodes();}
+            else if (name == "osm_ways") {return osm_ways();}
+            else if (name == "osm_relations") {return osm_relations();}
+            else if (name == "configuration") {return configuration();}
+            else if (name == "pointsofinterest") {return pois();}
+            else if (name == "ways") {return ways();}
+            else {return vertices();}
         }
 
         std::string  post_process(const Table &table) const;
@@ -156,6 +156,4 @@ class Tables {
         Table ways_vertices_pgr_config() const;
 };
 
-}
-
-
+} // namespace osm2pgr

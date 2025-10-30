@@ -29,7 +29,7 @@
 
 
 #include <string.h>
-#include "./XMLParser.h"
+#include "./xmlParser.hpp"
 
 namespace osm2pgr {
 

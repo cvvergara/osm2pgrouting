@@ -19,8 +19,8 @@
  ***************************************************************************/
 
 
-#include "database/Export2DB.h"
-#include "database/table_management.h"
+#include "database/export2DB.hpp"
+#include "database/table_management.hpp"
 
 #include <unistd.h>
 
@@ -29,9 +29,9 @@
 #include <string>
 #include <vector>
 
-#include "utilities/print_progress.h"
-#include "utilities/prog_options.h"
-#include "utilities/utilities.h"
+#include "utilities/print_progress.hpp"
+#include "utilities/prog_options.hpp"
+#include "utilities/utilities.hpp"
 
 #include "boost/algorithm/string/replace.hpp"
 

@@ -23,9 +23,9 @@
 #include <string>
 #include <map>
 #include <boost/lexical_cast.hpp>
-#include "configuration/tag_key.h"
-#include "configuration/tag_value.h"
-#include "osm_elements/osm_tag.h"
+#include "configuration/tag_key.hpp"
+#include "configuration/tag_value.hpp"
+#include "osm_elements/osmTag.hpp"
 
 namespace osm2pgr {
 class Configuration {

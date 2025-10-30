@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 
-#include "parser/XMLParser.h"
+#include "parser/xmlParser.hpp"
 
 #include <cerrno>
 #include <cstring>

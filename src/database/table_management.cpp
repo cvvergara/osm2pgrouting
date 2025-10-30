@@ -21,8 +21,8 @@
 #include <unistd.h>
 
 #include "boost/lexical_cast.hpp"
-#include "database/table_management.h"
-#include "utilities/utilities.h"
+#include "database/table_management.hpp"
+#include "utilities/utilities.hpp"
 
 namespace osm2pgr {
 

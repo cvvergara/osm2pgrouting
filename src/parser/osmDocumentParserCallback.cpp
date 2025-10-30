@@ -20,19 +20,19 @@
 
 
 
-#include "parser/OSMDocumentParserCallback.h"
+#include "parser/osmDocumentParserCallback.hpp"
 
 #include <math.h>
 #include <string>
 #include <cassert>
 #include <iostream>
 #include <sstream>
-#include "osm_elements/OSMDocument.h"
-#include "osm_elements/Relation.h"
-#include "osm_elements/osm_tag.h"
-#include "osm_elements/Way.h"
-#include "osm_elements/Node.h"
-#include "utilities/print_progress.h"
+#include "osm_elements/osmDocument.hpp"
+#include "osm_elements/relation.hpp"
+#include "osm_elements/osmTag.hpp"
+#include "osm_elements/way.hpp"
+#include "osm_elements/node.hpp"
+#include "utilities/print_progress.hpp"
 
 
 namespace osm2pgr {
@@ -204,7 +204,7 @@ void OSMDocumentParserCallback::EndElement(const char* name) {
         // TODO add all other relations
         delete last_relation;
         return;
-    } 
+    }
 }
 
 }  // end namespace osm2pgr

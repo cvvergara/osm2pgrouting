@@ -34,12 +34,12 @@
 
 #include <pqxx/pqxx>
 
-#include "parser/ConfigurationParserCallback.h"
-#include "parser/OSMDocumentParserCallback.h"
-#include "osm_elements/OSMDocument.h"
-#include "database/Export2DB.h"
-#include "utilities/handle_pgpass.h"
-#include "utilities/prog_options.h"
+#include "parser/configurationParserCallback.hpp"
+#include "parser/osmDocumentParserCallback.hpp"
+#include "osm_elements/osmDocument.hpp"
+#include "database/export2DB.hpp"
+#include "utilities/handle_pgpass.hpp"
+#include "utilities/prog_options.hpp"
 
 #if defined(__linux__)
 static

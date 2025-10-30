@@ -18,13 +18,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "parser/ConfigurationParserCallback.h"
+#include "parser/configurationParserCallback.hpp"
 
 #include <boost/lexical_cast.hpp>
 #include <string>
 
-#include "osm_elements/OSMDocument.h"
-#include "configuration/configuration.h"
+#include "osm_elements/osmDocument.hpp"
+#include "configuration/configuration.hpp"
 
 namespace osm2pgr {
 

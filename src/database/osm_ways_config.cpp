@@ -17,8 +17,8 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ********************************************************************PGR-GNU*/
 
-#include "database/table_management.h"
-#include "utilities/utilities.h"
+#include "database/table_management.hpp"
+#include "utilities/utilities.hpp"
 #include <vector>
 
 namespace osm2pgr {
