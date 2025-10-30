@@ -73,7 +73,6 @@ int XMLParser::Parse(XMLParserCallback& rCallback, const char* chFileName) {
             << static_cast<int>(XML_GetCurrentLineNumber(parser));
         fclose(fp);
         ret = 2;    // quit, return = 2 indicating parsing error
-        done = 1;
         return ret;
       }
     } while (!done);
