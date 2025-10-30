@@ -11,8 +11,14 @@
 #include <osmium/index/map/sparse_mem_array.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
 
+struct Vertices {
+  std::deque<int64_t> in_edges;
+  std::deque<int64_t> out_edges;
+  std::string geom;
+};
+
 std::map<int64_t, size_t> node_count;
-std::map<int64_t, std::pair<float, float>> vertices;
+std::map<int64_t, Vertices> vertices;
 
 class NodeCount : public osmium::handler::Handler {
   public:
@@ -98,6 +104,12 @@ class NodeCount : public osmium::handler::Handler {
 
 class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
   bool wfirst = true;
+  std::string get_point(const osmium::NodeRef& n) {
+          std::ostringstream oss;
+          oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
+          return oss.str();
+  }
+
   public:
     void way(const osmium::Way& way) {
       const osmium::TagList& tags = way.tags();
@@ -157,7 +169,9 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
 #endif
           newBroken = false;
           /* vertices table contains the first node of the segment */
-          vertices[n.rf] = std::pair<float, float>{n.lon(), n.lat()};
+          std::ostringstream oss;
+          oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
+          vertices[n.ref()].geom = oss.str();
           continue;
         }
 
@@ -167,8 +181,9 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
            * - INSERT because it's the last node of the edge
            * - Add to the vertices table
            */
-          std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
-          vertices.insert(n.ref());
+          std::ostringstream oss;
+          oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
+          vertices[n.ref()].geom = oss.str();
 #if 0
           std::cout << "INSERT because it's the last node of the edge\n" << points << "\n";
 #endif
@@ -187,10 +202,10 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
        */
       if (psize != 1) {
         std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
-        vertices.insert(n.ref());
-#if 0
-        std::cout << "INSERT WHEN psize != 1\n" << points << '\n';
-#endif
+        auto n = way.nodes().back();
+        std::ostringstream oss;
+        oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
+        vertices[n.ref()].geom = oss.str();
       }
     }
 };
@@ -254,4 +269,9 @@ int main(int argc, char *argv[]) {
   reader.close();
 
   /* print the vertices table */
+  std::cout << "COPY ways_vertices_pgr (osm_id, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+  for (const auto v : vertices) {
+    std::cout <<  std::setprecision (15)
+      << v.first << "\t" << v.second.geom << "\n";
+  }
 }
