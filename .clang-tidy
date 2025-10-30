@@ -1,6 +1,5 @@
 Checks: >
     google-*,
-    -google-global-names-in-headers,
     clang-analyzer-*,
     clang-diagnostic-*,
     cppcoreguidelines-*,
