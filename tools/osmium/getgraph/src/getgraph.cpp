@@ -11,14 +11,9 @@
 #include <osmium/index/map/sparse_mem_array.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
 
-struct Vertices {
-  std::deque<int64_t> in_edges;
-  std::deque<int64_t> out_edges;
-  std::string geom;
-};
 
 std::map<int64_t, size_t> node_count;
-std::map<int64_t, Vertices> vertices;
+std::map<int64_t, std::string> vertices;
 
 class NodeCount : public osmium::handler::Handler {
   public:
@@ -169,9 +164,7 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
 #endif
           newBroken = false;
           /* vertices table contains the first node of the segment */
-          std::ostringstream oss;
-          oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
-          vertices[n.ref()].geom = oss.str();
+          vertices[n.ref()] = get_point(n);
           continue;
         }
 
@@ -181,9 +174,7 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
            * - INSERT because it's the last node of the edge
            * - Add to the vertices table
            */
-          std::ostringstream oss;
-          oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
-          vertices[n.ref()].geom = oss.str();
+          vertices[n.ref()] = get_point(n);
 #if 0
           std::cout << "INSERT because it's the last node of the edge\n" << points << "\n";
 #endif
@@ -203,9 +194,7 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
       if (psize != 1) {
         std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
         auto n = way.nodes().back();
-        std::ostringstream oss;
-        oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
-        vertices[n.ref()].geom = oss.str();
+        vertices[n.ref()] = get_point(n);
       }
     }
 };
@@ -272,6 +261,7 @@ int main(int argc, char *argv[]) {
   std::cout << "COPY ways_vertices_pgr (osm_id, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
   for (const auto v : vertices) {
     std::cout <<  std::setprecision (15)
-      << v.first << "\t" << v.second.geom << "\n";
+      << v.first << "\t" << v.second << "\n";
   }
+  std::cout << "\\.\n";
 }
