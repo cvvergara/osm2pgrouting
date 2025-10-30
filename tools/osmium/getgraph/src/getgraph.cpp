@@ -14,6 +14,7 @@
 
 std::map<int64_t, size_t> node_count;
 std::map<int64_t, std::string> vertices;
+std::string copy_end = "\\.\n";
 
 class NodeCount : public osmium::handler::Handler {
   public:
@@ -22,7 +23,6 @@ class NodeCount : public osmium::handler::Handler {
       const char* highway = tags["highway"];
       const char* nameptr = tags["name"];
 
-#ifdef ADDNODES
       if (nfirst) {
         std::cout << "COPY osm_nodes (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
         nfirst = false;
@@ -44,7 +44,6 @@ class NodeCount : public osmium::handler::Handler {
           std::cout << "Found invalid location at " << node.id() << "\n";
         }
       }
-#endif
 
       if (!highway) return;
       if (!node.tags().empty()) node_count[node.id()]++;
@@ -57,17 +56,17 @@ class NodeCount : public osmium::handler::Handler {
       std::string name = nameptr? std::string("'") + nameptr + std::string("'") : "NULL";
       const char* highway = way.tags()["highway"];
 
-#ifdef ADDNODES
       if (wfirst) {
-        std::cout << "\\.\n";
+        /*
+         * end of osm_nodes COPY
+         */
+        std::cout << copy_end;
         std::cout << "COPY osm_ways (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
         wfirst = false;
       }
-#endif
 
       std::string points = "";
       for (const auto &n : way.nodes()) {
-#ifdef ADDNODES
         /*
          * get the points of the way
          */
@@ -75,7 +74,6 @@ class NodeCount : public osmium::handler::Handler {
           points += points.empty()? "" : ",";
           points += std::to_string(n.lon()) + " " + std::to_string(n.lat());
         }
-#endif
 
         /*
          * Count nodes to detect where to split
@@ -85,12 +83,10 @@ class NodeCount : public osmium::handler::Handler {
         }
       }
 
-#ifdef ADDNODES
       if (true /* --addnodes */) {
         std::cout << way.id() << "\t" << name
           << "\t\"LINESTRING(" << points << ")\"\n";
       }
-#endif
     }
   private:
     bool nfirst = true;
@@ -114,7 +110,6 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
       if (!highway) return;
 
       if (wfirst) {
-        std::cout << "\\.\n";
         std::cout << "COPY ways (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
         wfirst = false;
       }
@@ -159,9 +154,6 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
          * - newBroken == false
          */
         if (newBroken && psize == 1 ) {
-#if 0
-          std::cout << "newBroken && psize == 1: " << points << "\n";
-#endif
           newBroken = false;
           /* vertices table contains the first node of the segment */
           vertices[n.ref()] = get_point(n);
@@ -175,9 +167,7 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
            * - Add to the vertices table
            */
           vertices[n.ref()] = get_point(n);
-#if 0
-          std::cout << "INSERT because it's the last node of the edge\n" << points << "\n";
-#endif
+
           /*
            * It's the beginning of the next edge
            */
@@ -228,20 +218,14 @@ int main(int argc, char *argv[]) {
   osmium::apply(reader, location_handler, node_count_handler);
   reader.close();
 
-#ifdef ADDNODES
   /*
    * This is the end of the osm_ways COPY
    */
   if (true /* --addnodes */) {
-    std::cout << "\\.\n";
+    std::cout << copy_end;
   }
-#endif
 
   /* nodes that are in more than one way */
-#if 0
-  std::cout << "total nodes: " << node_count.size();
-#endif
-
   for (auto it = node_count.cbegin(); it != node_count.cend(); ) {
     if (it->second == 1)  {
       node_count.erase(it++);
@@ -249,13 +233,15 @@ int main(int argc, char *argv[]) {
       ++it;
     }
   }
-#if 0
-  std::cout << "nodes in more than one way: " << node_count.size();
-#endif
 
   osmium::io::Reader reader2{in_file_name, otypes};
   osmium::apply(reader2, location_handler, way_location_handler);
   reader.close();
+
+  /*
+   * end of ways COPY
+   */
+  std::cout << copy_end;
 
   /* print the vertices table */
   std::cout << "COPY ways_vertices_pgr (osm_id, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
@@ -263,5 +249,9 @@ int main(int argc, char *argv[]) {
     std::cout <<  std::setprecision (15)
       << v.first << "\t" << v.second << "\n";
   }
-  std::cout << "\\.\n";
+
+  /*
+   * end of ways_vertices_pgr COPY
+   */
+  std::cout << copy_end;
 }
