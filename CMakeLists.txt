@@ -8,7 +8,7 @@ if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
     You may need to remove CMakeCache.txt." )
 endif()
 
-PROJECT(osm2pgrouting VERSION 3.0.0
+PROJECT(osm2pgrouting VERSION 3.1.0
   LANGUAGES C CXX)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
