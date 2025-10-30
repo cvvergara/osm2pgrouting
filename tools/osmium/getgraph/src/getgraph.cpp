@@ -1,5 +1,7 @@
 #include <iostream>
 #include <iomanip>
+#include <map>
+#include <set>
 
 #include <osmium/handler.hpp>
 #include <osmium/io/any_input.hpp>
@@ -10,6 +12,7 @@
 #include <osmium/handler/node_locations_for_ways.hpp>
 
 std::map<int64_t, size_t> node_count;
+std::map<int64_t, std::pair<float, float>> vertices;
 
 class NodeCount : public osmium::handler::Handler {
   public:
@@ -99,7 +102,7 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
     void way(const osmium::Way& way) {
       const osmium::TagList& tags = way.tags();
       const char* nameptr = tags["name"];
-      std::string name = nameptr? std::string("'") + nameptr + std::string("'") : "NULL";
+      std::string name = nameptr? nameptr : "NULL";
       const char* highway = way.tags()["highway"];
       if (!highway) return;
 
@@ -153,6 +156,8 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
           std::cout << "newBroken && psize == 1: " << points << "\n";
 #endif
           newBroken = false;
+          /* vertices table contains the first node of the segment */
+          vertices[n.rf] = std::pair<float, float>{n.lon(), n.lat()};
           continue;
         }
 
@@ -160,9 +165,10 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
           /*
            * found a node in the node_count list
            * - INSERT because it's the last node of the edge
+           * - Add to the vertices table
            */
           std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
-
+          vertices.insert(n.ref());
 #if 0
           std::cout << "INSERT because it's the last node of the edge\n" << points << "\n";
 #endif
@@ -177,9 +183,11 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
       /*
        * When its the last node of the way:
        * - INSERT WHEN psize != 1: because it has more than one node
+       * - Add to the vertices table
        */
       if (psize != 1) {
         std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
+        vertices.insert(n.ref());
 #if 0
         std::cout << "INSERT WHEN psize != 1\n" << points << '\n';
 #endif
@@ -226,7 +234,10 @@ int main(int argc, char *argv[]) {
 #endif
 
   /* nodes that are in more than one way */
+#if 0
   std::cout << "total nodes: " << node_count.size();
+#endif
+
   for (auto it = node_count.cbegin(); it != node_count.cend(); ) {
     if (it->second == 1)  {
       node_count.erase(it++);
@@ -234,10 +245,13 @@ int main(int argc, char *argv[]) {
       ++it;
     }
   }
+#if 0
   std::cout << "nodes in more than one way: " << node_count.size();
-
+#endif
 
   osmium::io::Reader reader2{in_file_name, otypes};
   osmium::apply(reader2, location_handler, way_location_handler);
   reader.close();
+
+  /* print the vertices table */
 }
