@@ -71,6 +71,21 @@ message(STATUS "POSTGRESQL_LIBRARIES: ${POSTGRESQL_LIBRARIES}")
 message(STATUS "Boost_LIBRARIES: ${boost_LIBRARIES}")
 message(STATUS "PQXX_LIBRARIES: ${PQXX_LIBRARIES}")
 
+#---------------------------------------------
+# Clang tidy
+#---------------------------------------------
+
+option(USE_CLANG_TIDY "Use clang-tidy." OFF)
+
+if(USE_CLANG_TIDY)
+    find_program(CLANG_TIDY_COMMAND NAMES clang-tidy NO_CACHE)
+    if (CLANG_TIDY_COMMAND)
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND};--config-file=${CMAKE_SOURCE_DIR}/.clang-tidy")
+    else()
+        message(WARNING "Set to use clang-tidy, but not found.")
+    endif()
+endif()
+
 INCLUDE_DIRECTORIES(src
     ${POSTGRESQL_INCLUDE_DIR}
     ${EXPAT_INCLUDE_DIRS}
