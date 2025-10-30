@@ -485,16 +485,18 @@ void Export2DB::exportWays(const Ways &ways, const Configuration &config) const 
                     values.push_back(way.geometry_str(splits[j]));
 
                     // cost based on oneway
-                    if (way.is_reversed())
+                    if (way.is_reversed()) {
                         values.push_back(std::string("-") + length);
-                    else
+                    } else {
                         values.push_back(length);
+                    }
 
                     // reverse_cost
-                    if (way.is_oneway())
+                    if (way.is_oneway()) {
                         values.push_back(std::string("-") + length);
-                    else
+                    } else {
                         values.push_back(length);
+                    }
 
                     values.push_back(way.name());
                     PQputline(mycon, tab_separated(values).c_str());

@@ -36,10 +36,10 @@ void Configuration::add_tag_key(const Tag_key &t_key) {
 }
 
 
-bool 
+bool
 Configuration::has_tag_key(const std::string &key) const {
-        return m_Tag_keys.count(key) != 0; 
-}                      
+        return m_Tag_keys.count(key) != 0;
+}
 
 
 bool
@@ -49,43 +49,47 @@ Configuration::has_tag(const Tag &tag) const {
 }
 
 
-const Tag_value& 
+const Tag_value&
 Configuration::tag_value(const Tag &tag) const {
     return tag_key(tag).tag_value(tag);
-}                      
+}
 
 
-const Tag_key& 
+const Tag_key&
 Configuration::tag_key(const Tag &tag) const {
-    return m_Tag_keys.at(tag.key()); 
-}                      
+    return m_Tag_keys.at(tag.key());
+}
 
 
 double
 Configuration::maxspeed(const Tag &tag) const {
-    if (tag_key(tag).has(tag, "maxspeed"))
+    if (tag_key(tag).has(tag, "maxspeed")) {
         return boost::lexical_cast<double>(tag_key(tag).get(tag, "maxspeed"));
+    }
     return 50;
 }
 
 double
 Configuration::maxspeed_forward(const Tag &tag) const {
-    if (tag_key(tag).has(tag, "maxspeed:backward"))
+    if (tag_key(tag).has(tag, "maxspeed:backward")) {
         return boost::lexical_cast<double>(tag_key(tag).get(tag, "maxspeed:backward"));
+    }
     return maxspeed(tag);
 }
 
 double
 Configuration::maxspeed_backward(const Tag &tag) const {
-    if (tag_key(tag).has(tag, "maxspeed:forward"))
+    if (tag_key(tag).has(tag, "maxspeed:forward")) {
         return boost::lexical_cast<double>(tag_key(tag).get(tag, "maxspeed:backward"));
+    }
     return maxspeed(tag);
 }
 
 double
 Configuration::priority(const Tag &tag) const {
-    if (tag_key(tag).has(tag, "priority"))
+    if (tag_key(tag).has(tag, "priority")) {
         return boost::lexical_cast<double>(tag_key(tag).get(tag, "priority"));
+    }
     return 0;
 }
 

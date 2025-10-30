@@ -153,8 +153,9 @@ int main(int argc, char* argv[]) {
          */
         std::cout << "Connecting to the database"  << endl;
         osm2pgr::Export2DB dbConnection(vm, connection_str);
-        if (dbConnection.connect() == 1)
+        if (dbConnection.connect() == 1) {
             return 1;
+        }
 
 #ifndef NDEBUG
         dbConnection.install_postGIS();

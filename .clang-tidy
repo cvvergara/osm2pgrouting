@@ -1,7 +1,6 @@
 Checks: >
     google-*,
     -google-readability-casting,
-    -google-readability-braces-around-statements,
     -google-build-using-namespace,
     -google-global-names-in-headers,
     -google-readability-todo,
