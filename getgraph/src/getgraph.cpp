@@ -21,6 +21,7 @@
 namespace {
 
 const std::string copy_end = "\\.\n";
+const int PRECISION = 15;
 
 }
 
@@ -30,13 +31,13 @@ std::string get_name(const char* nameptr) {
 
 std::string get_point(const osmium::NodeRef &n) {
     std::ostringstream oss;
-    oss  << std::setprecision(15) << n.lon() << " " << n.lat();
+    oss  << std::setprecision(PRECISION) << n.lon() << " " << n.lat();
     return oss.str();
 };
 
 std::string get_point(const osmium::Node &n) {
     std::ostringstream oss;
-    oss  << std::setprecision(15) << n.location().lon() << " " << n.location().lat();
+    oss  << std::setprecision(PRECISION) << n.location().lon() << " " << n.location().lat();
     return "SRID=4326;POINT(" + oss.str() +  ")";
 };
 
@@ -201,7 +202,7 @@ class SplitWays : public osmium::handler::Handler {
         m_vertices(vertices),
         m_edge_conn(connInfo),
         m_edge_action(m_edge_conn),
-        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "name", "geom"})){
+        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "geom"})){
         };
 
     void after_split() {
@@ -221,7 +222,7 @@ class SplitWays : public osmium::handler::Handler {
         if (!highway) return;
 
         if (wfirst) {
-            std::cout << "COPY edges (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+            std::cout << "COPY edges (osm_id, osm_source, osm_target, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
             wfirst = false;
         }
 
@@ -230,6 +231,10 @@ class SplitWays : public osmium::handler::Handler {
         std::string points = "";
         std::string point = "";
         size_t psize = 0;
+        auto source = way.nodes().front().ref();
+        osmium::object_id_type target(0);
+
+
         for (const auto& n : way.nodes()) {
             /*
              * the point's coordinates
@@ -265,20 +270,23 @@ class SplitWays : public osmium::handler::Handler {
                  * - INSERT because it's the last node of the edge
                  * - Add to the vertices table
                  */
-                m_vertices[n.ref()] = "SRID=4326;POINT(" + get_point(n) +")";
+                target = n.ref();
+                m_vertices[target] = "SRID=4326;POINT(" + get_point(n) +")";
 
                 std::string geom = "SRID=4326;LINESTRING(" + points + ")";
-                auto data = std::make_tuple(way.id(), nameptr, geom);
+                auto data = std::make_tuple(way.id(), source, target, nameptr, geom);
                 m_edge_stream.write_values(data);
 
                 /*
                  * Use this code for saving into a file
                  */
-                std::cout << way.id() << "\t" << get_name(nameptr) << "\t" << geom << "\n";
+                std::cout << way.id() << "\t" << source << "\t" << target << "\t"
+                 << get_name(nameptr) << "\t" << geom << "\n";
 
                 /*
                  * It's the beginning of the next edge
                  */
+                source = target;
                 points = point;
                 psize = 1;
             }
@@ -291,20 +299,23 @@ class SplitWays : public osmium::handler::Handler {
          */
         if (psize != 1) {
             std::string geom = "SRID=4326;LINESTRING(" + points + ")";
-            auto data = std::make_tuple(way.id(), nameptr, geom);
+            auto n = way.nodes().back();
+            target = n.ref();
+
+            auto data = std::make_tuple(way.id(), source, target, nameptr, geom);
 
             m_edge_stream.write_values(data);
 
             /*
              * Use this code for saving into a file
              */
-            std::cout << way.id() << "\t" << get_name(nameptr) << "\t\"LINESTRING(" << points << ")\"\n";
+            std::cout << way.id() << "\t" << source << "\t" << target << "\t"
+                << get_name(nameptr) << "\t" << geom << "\n";
 
             /*
              * The last node of the way goes to the vertices table
              */
-            auto n = way.nodes().back();
-            m_vertices[n.ref()] = "SRID=4326;POINT(" + get_point(n) +")";
+            m_vertices[target] = "SRID=4326;POINT(" + get_point(n) +")";
         }
     }
 
@@ -408,7 +419,15 @@ int main(int argc, char *argv[]) {
         create_tables.exec(sql);
         sql = "CREATE TABLE IF NOT EXISTS edges("
             "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
+            "source BIGINT,"
+            "target BIGINT,"
+            "x1 numeric(11,8) GENERATED ALWAYS AS (ST_X(ST_StartPoint(geom))) STORED,"
+            "y1 numeric(11,8) GENERATED ALWAYS AS (ST_Y(ST_StartPoint(geom))) STORED,"
+            "x2 numeric(11,8) GENERATED ALWAYS AS (ST_X(ST_EndPoint(geom))) STORED,"
+            "y2 numeric(11,8) GENERATED ALWAYS AS (ST_Y(ST_EndPoint(geom))) STORED,"
             "osm_id BIGINT,"
+            "osm_source BIGINT,"
+            "osm_target BIGINT,"
             "name TEXT,"
             "geom GEOMETRY(LINESTRING, 4326));";
         create_tables.exec(sql);
