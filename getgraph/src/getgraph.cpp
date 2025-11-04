@@ -26,13 +26,16 @@ const std::string copy_end = "\\.\n";
 
 
 class NodeCount : public osmium::handler::Handler {
-
   public:
     NodeCount() = delete;
-    NodeCount(std::map<int64_t, size_t> &node_count, pqxx::connection& conn) :
+    NodeCount(std::map<int64_t, size_t> &node_count, std::string connInfo) :
         m_node_count(node_count),
-        m_node_action(conn),
-        m_node_stream(pqxx::stream_to::table(m_action, {"new_osm_nodes"}, {"osm_id", "name", "geom"}))
+        m_node_conn(connInfo),
+        m_node_action(m_node_conn),
+        m_node_stream(pqxx::stream_to::table(m_node_action, {"new_osm_nodes"}, {"osm_id", "name", "geom"})),
+        m_way_conn(connInfo),
+        m_way_action(m_way_conn),
+        m_way_stream(pqxx::stream_to::table(m_way_action, {"new_osm_ways"}, {"osm_id", "name", "geom"}))
     {
     }
 
@@ -99,6 +102,19 @@ class NodeCount : public osmium::handler::Handler {
         std::clog << "Completing the node stream\n";
     }
 
+    std::string get_point(const osmium::Node &n) const {
+        return std::to_string(n.location().lon()) + " " + std::to_string(n.location().lat());
+    };
+
+    void after_ways() {
+        /*
+         * Finalize the COPY operation
+         */
+        m_way_stream.complete();
+        m_way_action.commit();
+        std::clog << "Completing the way stream\n";
+    }
+
     void way(const osmium::Way& way) {
         const osmium::TagList& tags = way.tags();
         const char* nameptr = tags["name"];
@@ -111,6 +127,9 @@ class NodeCount : public osmium::handler::Handler {
              */
             after_nodes();
 
+            /*
+             * Use this code for saving into a file
+             */
             std::cout << "COPY osm_ways (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
             wfirst = false;
         }
@@ -134,8 +153,11 @@ class NodeCount : public osmium::handler::Handler {
         }
 
         if (true /* --addnodes */) {
-            std::cout << way.id() << "\t" << name
-                << "\t\"LINESTRING(" << points << ")\"\n";
+            std::string geom = "SRID=4326;LINESTRING(" + points + ")";
+            auto data = std::make_tuple(way.id(), nameptr, geom);
+
+            m_way_stream.write_values(data);
+            std::cout << way.id() << "\t" << name << geom << "\n";
         }
     }
 
@@ -145,8 +167,12 @@ class NodeCount : public osmium::handler::Handler {
     std::map<int64_t, size_t> &m_node_count;
 
     /** The postgres connection */
+    pqxx::connection m_node_conn;
     pqxx::work m_node_action;
     pqxx::stream_to m_node_stream;
+    pqxx::connection m_way_conn;
+    pqxx::work m_way_action;
+    pqxx::stream_to m_way_stream;
 
 };
 
@@ -321,6 +347,12 @@ int main(int argc, char *argv[]) {
             "name TEXT,"
             "geom GEOMETRY(POINT, 4326));";
         create_tables.exec(sql);
+        sql = "CREATE TABLE IF NOT EXISTS new_osm_ways("
+            "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
+            "osm_id BIGINT,"
+            "name TEXT,"
+            "geom GEOMETRY(LINESTRING, 4326));";
+        create_tables.exec(sql);
         create_tables.commit();
 
 
@@ -344,13 +376,14 @@ int main(int argc, char *argv[]) {
         /*
          * Create the handler
          */
-        NodeCount node_count_handler(node_count, dbconn);
+        NodeCount node_count_handler(node_count, connection_str);
 
         // Apply the handler to the reader
-        std::cout << "Starting OSM node count processing..." << std::endl;
+        std::clog << "Starting OSM node count processing..." << std::endl;
         osmium::apply(reader, location_handler, node_count_handler);
         reader.close();
-        std::cout << "Finished OSM node count processing." << std::endl;
+        std::clog << "Finished OSM node count processing." << std::endl;
+        node_count_handler.after_ways();
 
         /*
          * This is the end of the osm_ways COPY
