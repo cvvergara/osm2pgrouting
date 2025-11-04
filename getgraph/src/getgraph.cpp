@@ -23,11 +23,7 @@ namespace {
 const std::string copy_end = "\\.\n";
 const int PRECISION = 15;
 
-struct Vertices_data {
-    std::string geom;
-    std::vector<osmium::object_id_type> in_edges;
-    std::vector<osmium::object_id_type> out_edges;
-}
+}  // namespace
 
 std::string get_name(const char* nameptr) {
     return nameptr? nameptr : "NULL";
@@ -525,6 +521,8 @@ int main(int argc, char *argv[]) {
         pqxx::work updates(dbconn);
         sql = "UPDATE edges set source = v.id FROM (SELECT osm_id, id FROM vertices) AS v WHERE osm_source = v.osm_id;";
         sql += "UPDATE edges set target = v.id FROM (SELECT osm_id, id FROM vertices) AS v WHERE osm_target = v.osm_id;";
+        sql += "UPDATE vertices set out_edges = e.arr FROM (SELECT source, array_agg(id) AS arr FROM edges group by source) AS e WHERE id = source;";
+        sql += "UPDATE vertices set in_edges = e.arr FROM (SELECT target, array_agg(id) AS arr FROM edges group by target) AS e WHERE id = target;";
         updates.exec(sql);
         updates.commit();
     }
