@@ -42,6 +42,39 @@ std::string get_point(const osmium::Node &n) {
 };
 
 
+/*
+ * Helper function to escape strings for hstore format
+ */
+std::string escape_hstore(const std::string& s) {
+    std::stringstream ss;
+    ss << "\"";
+    for (char c : s) {
+        if (c == '"' || c == '\\') {
+            ss << "\\";
+        }
+        ss << c;
+    }
+    ss << "\"";
+    return ss.str();
+}
+
+/*
+ * Helper function to convert osmium tags to hstore string
+ */
+std::string tags_to_hstore(const osmium::TagList& tags) {
+    std::stringstream ss;
+    bool first = true;
+    for (const auto& tag : tags) {
+        if (!first) {
+            ss << ", ";
+        }
+        ss << escape_hstore(tag.key()) << "=>" << escape_hstore(tag.value());
+        first = false;
+    }
+    return ss.str();
+}
+
+
 class NodeCount : public osmium::handler::Handler {
   public:
     NodeCount() = delete;
@@ -49,10 +82,10 @@ class NodeCount : public osmium::handler::Handler {
         m_node_count(node_count),
         m_node_conn(connInfo),
         m_node_action(m_node_conn),
-        m_node_stream(pqxx::stream_to::table(m_node_action, {"new_osm_nodes"}, {"osm_id", "name", "geom"})),
+        m_node_stream(pqxx::stream_to::table(m_node_action, {"new_osm_nodes"}, {"osm_id", "name", "osm_tags", "geom"})),
         m_way_conn(connInfo),
         m_way_action(m_way_conn),
-        m_way_stream(pqxx::stream_to::table(m_way_action, {"new_osm_ways"}, {"osm_id", "name", "geom"}))
+        m_way_stream(pqxx::stream_to::table(m_way_action, {"new_osm_ways"}, {"osm_id", "name", "osm_tags", "geom"}))
     {
     }
 
@@ -74,24 +107,21 @@ class NodeCount : public osmium::handler::Handler {
             /*
              * Use this code for saving into a file
              */
-            std::string sql = "COPY new_osm_nodes (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;";
+            std::string sql = "COPY new_osm_nodes (osm_id, name, osm_tags, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;";
             std::cout << sql << "\n";
             nfirst = false;
         }
         if (true /* --addnodes */) {
 
-            /* hint on how to add the tags of the nodes
-               UPDATE tab SET h = h || hstore(array['q', 'w'], array['11', '12']);
-               */
-
-            auto data = std::make_tuple(node.id(), nameptr, get_point(node));
+            auto the_tags = tags_to_hstore(tags);
+            auto data = std::make_tuple(node.id(), nameptr, the_tags, get_point(node));
 
             m_node_stream.write_values(data);
 
             /*
              * Use this code for saving into a file
              */
-            std::cout << node.id() << "\t" << get_name(nameptr) << "\t" << get_point(node) << "\n";
+            std::cout << node.id() << "\t" << get_name(nameptr) << "\t" << (the_tags.empty()? "NULL" : the_tags) << "\t" << get_point(node) << "\n";
         }
 
         /*
@@ -140,7 +170,7 @@ class NodeCount : public osmium::handler::Handler {
             /*
              * Use this code for saving into a file
              */
-            std::cout << "COPY osm_ways (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+            std::cout << "COPY new_osm_ways (osm_id, name, osm_tags, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
             wfirst = false;
         }
 
@@ -164,14 +194,15 @@ class NodeCount : public osmium::handler::Handler {
 
         if (true /* --addnodes */) {
             std::string geom = "SRID=4326;LINESTRING(" + points + ")";
-            auto data = std::make_tuple(way.id(), nameptr, geom);
+            auto the_tags = tags_to_hstore(tags);
+            auto data = std::make_tuple(way.id(), nameptr, the_tags, geom);
 
             m_way_stream.write_values(data);
 
             /*
              * Use this code for saving into a file
              */
-            std::cout << way.id() << "\t" << get_name(nameptr) << "\t" << geom << "\n";
+            std::cout << way.id() << "\t" << get_name(nameptr) << "\t" << (the_tags.empty()? "NULL" : the_tags) << "\t" << geom << "\n";
         }
     }
 
@@ -202,7 +233,7 @@ class SplitWays : public osmium::handler::Handler {
         m_vertices(vertices),
         m_edge_conn(connInfo),
         m_edge_action(m_edge_conn),
-        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "geom"})){
+        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "osm_tags", "geom"})){
         };
 
     void after_split() {
@@ -222,10 +253,11 @@ class SplitWays : public osmium::handler::Handler {
         if (!highway) return;
 
         if (wfirst) {
-            std::cout << "COPY edges (osm_id, osm_source, osm_target, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+            std::cout << "COPY edges (osm_id, osm_source, osm_target, name, osm_tags, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
             wfirst = false;
         }
 
+        auto the_tags = tags_to_hstore(tags);
 
         bool newBroken = true;
         std::string points = "";
@@ -274,14 +306,14 @@ class SplitWays : public osmium::handler::Handler {
                 m_vertices[target] = "SRID=4326;POINT(" + get_point(n) +")";
 
                 std::string geom = "SRID=4326;LINESTRING(" + points + ")";
-                auto data = std::make_tuple(way.id(), source, target, nameptr, geom);
+                auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, geom);
                 m_edge_stream.write_values(data);
 
                 /*
                  * Use this code for saving into a file
                  */
                 std::cout << way.id() << "\t" << source << "\t" << target << "\t"
-                 << get_name(nameptr) << "\t" << geom << "\n";
+                 << get_name(nameptr) << "\t" << (the_tags.empty()? "NULL" : the_tags) << "\t" << geom << "\n";
 
                 /*
                  * It's the beginning of the next edge
@@ -302,7 +334,7 @@ class SplitWays : public osmium::handler::Handler {
             auto n = way.nodes().back();
             target = n.ref();
 
-            auto data = std::make_tuple(way.id(), source, target, nameptr, geom);
+            auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, geom);
 
             m_edge_stream.write_values(data);
 
@@ -310,7 +342,7 @@ class SplitWays : public osmium::handler::Handler {
              * Use this code for saving into a file
              */
             std::cout << way.id() << "\t" << source << "\t" << target << "\t"
-                << get_name(nameptr) << "\t" << geom << "\n";
+                << get_name(nameptr) << "\t" << (the_tags.empty()? "NULL" : the_tags) << "\t" << geom << "\n";
 
             /*
              * The last node of the way goes to the vertices table
@@ -409,12 +441,14 @@ int main(int argc, char *argv[]) {
             "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
             "osm_id BIGINT,"
             "name TEXT,"
+            "osm_tags hstore,"
             "geom GEOMETRY(POINT, 4326));";
         create_tables.exec(sql);
         sql = "CREATE TABLE IF NOT EXISTS new_osm_ways("
             "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
             "osm_id BIGINT,"
             "name TEXT,"
+            "osm_tags hstore,"
             "geom GEOMETRY(LINESTRING, 4326));";
         create_tables.exec(sql);
         sql = "CREATE TABLE IF NOT EXISTS edges("
@@ -426,10 +460,11 @@ int main(int argc, char *argv[]) {
             "y1 numeric(11,8) GENERATED ALWAYS AS (ST_Y(ST_StartPoint(geom))) STORED,"
             "x2 numeric(11,8) GENERATED ALWAYS AS (ST_X(ST_EndPoint(geom))) STORED,"
             "y2 numeric(11,8) GENERATED ALWAYS AS (ST_Y(ST_EndPoint(geom))) STORED,"
+            "name TEXT,"
             "osm_id BIGINT,"
             "osm_source BIGINT,"
             "osm_target BIGINT,"
-            "name TEXT,"
+            "osm_tags hstore,"
             "geom GEOMETRY(LINESTRING, 4326));";
         create_tables.exec(sql);
         sql = "CREATE TABLE IF NOT EXISTS vertices("
