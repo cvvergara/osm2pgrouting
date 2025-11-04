@@ -52,7 +52,7 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 cmake_print_variables(PostgreSQL_INCLUDE_DIR PostgreSQL_LIBRARIES)
 cmake_print_variables(EXPAT_INCLUDE_DIRS EXPAT_LIBRARIES)
 Cmake_print_variables(OSMIUM_INCLUDE_DIRS OSMIUM_LIBRARIES)
-cmake_print_variables(PQXX_VERSION PQXX_INCLUDE_DIRS)
+cmake_print_variables(PQXX_VERSION PQXX_INCLUDE_DIRS PQXX_LIBRARIES)
 cmake_print_variables(Boost_INCLUDE_DIRS Boost_LIBRARIES)
 
 
@@ -78,6 +78,7 @@ cmake_print_variables(CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG)
 add_executable(getgraph ${SRC})
 
 TARGET_LINK_LIBRARIES(getgraph
+    ${PQXX_LIBRARIES}
     ${PostgreSQL_LIBRARIES}
     ${EXPAT_LIBRARIES}
     ${Boost_LIBRARIES}
