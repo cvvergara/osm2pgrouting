@@ -24,6 +24,22 @@ const std::string copy_end = "\\.\n";
 
 }
 
+std::string get_name(const char* nameptr) {
+    return nameptr? nameptr : "NULL";
+};
+
+std::string get_point(const osmium::NodeRef &n) {
+    std::ostringstream oss;
+    oss  << std::setprecision(15) << n.lon() << " " << n.lat();
+    return oss.str();
+};
+
+std::string get_point(const osmium::Node &n) {
+    std::ostringstream oss;
+    oss  << std::setprecision(15) << n.location().lon() << " " << n.location().lat();
+    return "SRID=4326;POINT(" + oss.str() +  ")";
+};
+
 
 class NodeCount : public osmium::handler::Handler {
   public:
@@ -67,18 +83,14 @@ class NodeCount : public osmium::handler::Handler {
                UPDATE tab SET h = h || hstore(array['q', 'w'], array['11', '12']);
                */
 
-            std::string name = nameptr? nameptr : "NULL";
-            std::string geom = "SRID=4326;POINT(";
-            geom += std::to_string(node.location().lon()) + " ";
-            geom += std::to_string(node.location().lat()) + ")\n";
-            auto data = std::make_tuple(node.id(), nameptr, geom);
+            auto data = std::make_tuple(node.id(), nameptr, get_point(node));
 
             m_node_stream.write_values(data);
 
             /*
              * Use this code for saving into a file
              */
-            std::cout << node.id() << "\t" << name << "\t" << geom << "\n";
+            std::cout << node.id() << "\t" << get_name(nameptr) << "\t" << get_point(node) << "\n";
         }
 
         /*
@@ -102,10 +114,6 @@ class NodeCount : public osmium::handler::Handler {
         std::clog << "Completing the node stream\n";
     }
 
-    std::string get_point(const osmium::Node &n) const {
-        return std::to_string(n.location().lon()) + " " + std::to_string(n.location().lat());
-    };
-
     void after_ways() {
         /*
          * Finalize the COPY operation
@@ -118,7 +126,6 @@ class NodeCount : public osmium::handler::Handler {
     void way(const osmium::Way& way) {
         const osmium::TagList& tags = way.tags();
         const char* nameptr = tags["name"];
-        std::string name = nameptr? std::string("'") + nameptr + std::string("'") : "NULL";
         const char* highway = way.tags()["highway"];
 
         if (wfirst) {
@@ -141,7 +148,7 @@ class NodeCount : public osmium::handler::Handler {
              */
             if (true /* --addnodes */) {
                 points += points.empty()? "" : ",";
-                points += std::to_string(n.lon()) + " " + std::to_string(n.lat());
+                points += get_point(n);
             }
 
             /*
@@ -157,7 +164,11 @@ class NodeCount : public osmium::handler::Handler {
             auto data = std::make_tuple(way.id(), nameptr, geom);
 
             m_way_stream.write_values(data);
-            std::cout << way.id() << "\t" << name << geom << "\n";
+
+            /*
+             * Use this code for saving into a file
+             */
+            std::cout << way.id() << "\t" << get_name(nameptr) << "\t" << geom << "\n";
         }
     }
 
@@ -176,29 +187,38 @@ class NodeCount : public osmium::handler::Handler {
 
 };
 
-class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
-    std::string get_point(const osmium::NodeRef& n) {
-        std::ostringstream oss;
-        oss  << std::setprecision(15) << "\"POINT(" << n.lon() << " " << n.lat() << ")\"";
-        return oss.str();
-    }
+class SplitWays : public osmium::handler::Handler {
 
-    public:
-    explicit Wayid_NodeLocationsofWays(
+  public:
+    SplitWays() = delete;
+    SplitWays(
             std::map<int64_t, size_t> &node_count,
-            std::map<int64_t, std::string> &vertices) :
-        m_node_count(node_count), m_vertices(vertices) {};
-    Wayid_NodeLocationsofWays() = delete;
+            std::map<int64_t, std::string> &vertices,
+            std::string connInfo) :
+        m_node_count(node_count),
+        m_vertices(vertices),
+        m_edge_conn(connInfo),
+        m_edge_action(m_edge_conn),
+        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "name", "geom"})){
+        };
+
+    void after_split() {
+        /*
+         * Finalize the COPY operation
+         */
+        m_edge_stream.complete();
+        m_edge_action.commit();
+        std::clog << "Completing the split stream\n";
+    }
 
     void way(const osmium::Way& way) {
         const osmium::TagList& tags = way.tags();
         const char* nameptr = tags["name"];
-        std::string name = nameptr? nameptr : "NULL";
         const char* highway = way.tags()["highway"];
         if (!highway) return;
 
         if (wfirst) {
-            std::cout << "COPY ways (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+            std::cout << "COPY edges (osm_id, name, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
             wfirst = false;
         }
 
@@ -211,9 +231,7 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
             /*
              * the point's coordinates
              */
-            std::ostringstream oss;
-            oss  << std::setprecision(15) << n.lon() << " " << n.lat();
-            point = oss.str();
+            point = get_point(n);
 
             /*
              * add to the list of points
@@ -246,6 +264,15 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
                  */
                 m_vertices[n.ref()] = get_point(n);
 
+                std::string geom = "SRID=4326;LINESTRING(" + points + ")";
+                auto data = std::make_tuple(way.id(), nameptr, geom);
+                m_edge_stream.write_values(data);
+
+                /*
+                 * Use this code for saving into a file
+                 */
+                std::cout << way.id() << "\t" << get_name(nameptr) << "\t" << geom << "\n";
+
                 /*
                  * It's the beginning of the next edge
                  */
@@ -260,16 +287,33 @@ class Wayid_NodeLocationsofWays : public osmium::handler::Handler {
          * - Add to the vertices table
          */
         if (psize != 1) {
-            std::cout << way.id() << "\t" << name << "\t\"LINESTRING(" << points << ")\"\n";
+            std::string geom = "SRID=4326;LINESTRING(" + points + ")";
+            auto data = std::make_tuple(way.id(), nameptr, geom);
+
+            m_edge_stream.write_values(data);
+
+            /*
+             * Use this code for saving into a file
+             */
+            std::cout << way.id() << "\t" << get_name(nameptr) << "\t\"LINESTRING(" << points << ")\"\n";
+
+            /*
+             * The last node of the way goes to the vertices table
+             */
             auto n = way.nodes().back();
             m_vertices[n.ref()] = get_point(n);
         }
     }
 
-    private:
+  private:
     bool wfirst = true;
     std::map<int64_t, size_t> &m_node_count;
     std::map<int64_t, std::string> &m_vertices;
+
+    /** The postgres connection */
+    pqxx::connection m_edge_conn;
+    pqxx::work m_edge_action;
+    pqxx::stream_to m_edge_stream;
 };
 
 int main(int argc, char *argv[]) {
@@ -353,6 +397,12 @@ int main(int argc, char *argv[]) {
             "name TEXT,"
             "geom GEOMETRY(LINESTRING, 4326));";
         create_tables.exec(sql);
+        sql = "CREATE TABLE IF NOT EXISTS edges("
+            "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
+            "osm_id BIGINT,"
+            "name TEXT,"
+            "geom GEOMETRY(LINESTRING, 4326));";
+        create_tables.exec(sql);
         create_tables.commit();
 
 
@@ -393,6 +443,7 @@ int main(int argc, char *argv[]) {
         }
 
         /* nodes that are in more than one way */
+        std::clog << "node count: " << node_count.size() << "\n";
         for (auto it = node_count.cbegin(); it != node_count.cend(); ) {
             if (it->second == 1)  {
                 node_count.erase(it++);
@@ -400,16 +451,18 @@ int main(int argc, char *argv[]) {
                 ++it;
             }
         }
+        std::clog << "new node count: " << node_count.size() << "\n";
 
         /*
          * storage for the vertices (start and end vertices of a linestring)
          */
         std::map<int64_t, std::string> vertices;
 
-        Wayid_NodeLocationsofWays way_location_handler(node_count, vertices);
+        SplitWays split_handler(node_count, vertices, connection_str);
         osmium::io::Reader reader2{in_file_name, otypes};
-        osmium::apply(reader2, location_handler, way_location_handler);
+        osmium::apply(reader2, location_handler, split_handler);
         reader.close();
+        split_handler.after_split();
 
         /*
          * end of ways COPY
