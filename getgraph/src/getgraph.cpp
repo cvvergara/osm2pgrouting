@@ -23,6 +23,10 @@ namespace {
 const std::string copy_end = "\\.\n";
 const int PRECISION = 15;
 
+struct Vertices_data {
+    std::string geom;
+    std::vector<osmium::object_id_type> in_edges;
+    std::vector<osmium::object_id_type> out_edges;
 }
 
 std::string get_name(const char* nameptr) {
@@ -421,6 +425,7 @@ int main(int argc, char *argv[]) {
             "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
             "source BIGINT,"
             "target BIGINT,"
+            "length DOUBLE PRECISION GENERATED ALWAYS AS (ST_length(geom::geography)) STORED,"
             "x1 numeric(11,8) GENERATED ALWAYS AS (ST_X(ST_StartPoint(geom))) STORED,"
             "y1 numeric(11,8) GENERATED ALWAYS AS (ST_Y(ST_StartPoint(geom))) STORED,"
             "x2 numeric(11,8) GENERATED ALWAYS AS (ST_X(ST_EndPoint(geom))) STORED,"
@@ -516,6 +521,12 @@ int main(int argc, char *argv[]) {
         vertices_action.commit();
 
         std::cout << copy_end;
+
+        pqxx::work updates(dbconn);
+        sql = "UPDATE edges set source = v.id FROM (SELECT osm_id, id FROM vertices) AS v WHERE osm_source = v.osm_id;";
+        sql += "UPDATE edges set target = v.id FROM (SELECT osm_id, id FROM vertices) AS v WHERE osm_target = v.osm_id;";
+        updates.exec(sql);
+        updates.commit();
     }
 
     catch (const std::exception &e){
