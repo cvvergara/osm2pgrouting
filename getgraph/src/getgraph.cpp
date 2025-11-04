@@ -112,6 +112,7 @@ class NodeCount : public osmium::handler::Handler {
         m_node_stream.complete();
         m_node_action.commit();
         std::clog << "Completing the node stream\n";
+        std::cout << copy_end;
     }
 
     void after_ways() {
@@ -121,6 +122,7 @@ class NodeCount : public osmium::handler::Handler {
         m_way_stream.complete();
         m_way_action.commit();
         std::clog << "Completing the way stream\n";
+        std::cout << copy_end;
     }
 
     void way(const osmium::Way& way) {
@@ -209,6 +211,7 @@ class SplitWays : public osmium::handler::Handler {
         m_edge_stream.complete();
         m_edge_action.commit();
         std::clog << "Completing the split stream\n";
+        std::cout << copy_end;
     }
 
     void way(const osmium::Way& way) {
@@ -252,7 +255,7 @@ class SplitWays : public osmium::handler::Handler {
             if (newBroken && psize == 1 ) {
                 newBroken = false;
                 /* vertices table contains the first node of the segment */
-                m_vertices[n.ref()] = get_point(n);
+                m_vertices[n.ref()] = "SRID=4326;POINT(" + get_point(n) +")";
                 continue;
             }
 
@@ -262,7 +265,7 @@ class SplitWays : public osmium::handler::Handler {
                  * - INSERT because it's the last node of the edge
                  * - Add to the vertices table
                  */
-                m_vertices[n.ref()] = get_point(n);
+                m_vertices[n.ref()] = "SRID=4326;POINT(" + get_point(n) +")";
 
                 std::string geom = "SRID=4326;LINESTRING(" + points + ")";
                 auto data = std::make_tuple(way.id(), nameptr, geom);
@@ -301,7 +304,7 @@ class SplitWays : public osmium::handler::Handler {
              * The last node of the way goes to the vertices table
              */
             auto n = way.nodes().back();
-            m_vertices[n.ref()] = get_point(n);
+            m_vertices[n.ref()] = "SRID=4326;POINT(" + get_point(n) +")";
         }
     }
 
@@ -385,6 +388,12 @@ int main(int argc, char *argv[]) {
         pqxx::work create_tables(dbconn);
         std::string sql = "DROP TABLE IF EXISTS new_osm_nodes";
         create_tables.exec(sql);
+        sql = "DROP TABLE IF EXISTS new_osm_ways";
+        create_tables.exec(sql);
+        sql = "DROP TABLE IF EXISTS edges";
+        create_tables.exec(sql);
+        sql = "DROP TABLE IF EXISTS vertices";
+        create_tables.exec(sql);
         sql = "CREATE TABLE IF NOT EXISTS new_osm_nodes("
             "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
             "osm_id BIGINT,"
@@ -402,6 +411,15 @@ int main(int argc, char *argv[]) {
             "osm_id BIGINT,"
             "name TEXT,"
             "geom GEOMETRY(LINESTRING, 4326));";
+        create_tables.exec(sql);
+        sql = "CREATE TABLE IF NOT EXISTS vertices("
+            "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
+            "in_edges BIGINT[],"
+            "out_edges BIGINT[],"
+            "x numeric(11,8) GENERATED ALWAYS AS (ST_X(geom)) STORED,"
+            "y numeric(11,8) GENERATED ALWAYS AS (ST_Y(geom)) STORED,"
+            "osm_id BIGINT,"
+            "geom GEOMETRY(POINT, 4326) NOT NULL);";
         create_tables.exec(sql);
         create_tables.commit();
 
@@ -435,12 +453,6 @@ int main(int argc, char *argv[]) {
         std::clog << "Finished OSM node count processing." << std::endl;
         node_count_handler.after_ways();
 
-        /*
-         * This is the end of the osm_ways COPY
-         */
-        if (true /* --addnodes */) {
-            std::cout << copy_end;
-        }
 
         /* nodes that are in more than one way */
         std::clog << "node count: " << node_count.size() << "\n";
@@ -465,20 +477,25 @@ int main(int argc, char *argv[]) {
         split_handler.after_split();
 
         /*
-         * end of ways COPY
+         * print the vertices table
          */
-        std::cout << copy_end;
+        pqxx::work vertices_action(dbconn);
+        pqxx::stream_to vertices_stream(pqxx::stream_to::table(vertices_action, {"vertices"}, {"osm_id", "geom"}));
 
-        /* print the vertices table */
-        std::cout << "COPY ways_vertices_pgr (osm_id, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+        std::cout << "COPY vertices (osm_id, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
         for (const auto v : vertices) {
-            std::cout <<  std::setprecision (15)
-                << v.first << "\t" << v.second << "\n";
+            auto data = std::make_tuple(v.first, v.second);
+
+            vertices_stream.write_values(data);
+            std::cout << v.first << "\t" << v.second << "\n";
         }
 
         /*
          * end of ways_vertices_pgr COPY
          */
+        vertices_stream.complete();
+        vertices_action.commit();
+
         std::cout << copy_end;
     }
 
