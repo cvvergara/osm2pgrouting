@@ -233,7 +233,7 @@ class SplitWays : public osmium::handler::Handler {
         m_vertices(vertices),
         m_edge_conn(connInfo),
         m_edge_action(m_edge_conn),
-        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "osm_tags", "geom"})){
+        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "osm_tags", "osm_oneway", "geom"})){
         };
 
     void after_split() {
@@ -249,11 +249,12 @@ class SplitWays : public osmium::handler::Handler {
     void way(const osmium::Way& way) {
         const osmium::TagList& tags = way.tags();
         const char* nameptr = tags["name"];
+        const char* onewayptr = tags["oneway"];
         const char* highway = way.tags()["highway"];
         if (!highway) return;
 
         if (wfirst) {
-            std::cout << "COPY edges (osm_id, osm_source, osm_target, name, osm_tags, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
+            std::cout << "COPY edges (osm_id, osm_source, osm_target, name, osm_tags, osm_oneway, geom) FROM stdin WITH DELIMITER '\t' NULL 'NULL' CSV;\n";
             wfirst = false;
         }
 
@@ -306,7 +307,7 @@ class SplitWays : public osmium::handler::Handler {
                 m_vertices[target] = "SRID=4326;POINT(" + get_point(n) +")";
 
                 std::string geom = "SRID=4326;LINESTRING(" + points + ")";
-                auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, geom);
+                auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, onewayptr, geom);
                 m_edge_stream.write_values(data);
 
                 /*
@@ -334,7 +335,7 @@ class SplitWays : public osmium::handler::Handler {
             auto n = way.nodes().back();
             target = n.ref();
 
-            auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, geom);
+            auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, onewayptr, geom);
 
             m_edge_stream.write_values(data);
 
@@ -465,6 +466,7 @@ int main(int argc, char *argv[]) {
             "osm_source BIGINT,"
             "osm_target BIGINT,"
             "osm_tags hstore,"
+            "osm_oneway TEXT,"
             "geom GEOMETRY(LINESTRING, 4326));";
         create_tables.exec(sql);
         sql = "CREATE TABLE IF NOT EXISTS vertices("
