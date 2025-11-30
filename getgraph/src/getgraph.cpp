@@ -29,6 +29,10 @@ std::string get_name(const char* nameptr) {
     return nameptr? nameptr : "NULL";
 };
 
+std::string get_value(const char* tagptr) {
+    return tagptr? tagptr : "";
+};
+
 std::string get_point(const osmium::NodeRef &n) {
     std::ostringstream oss;
     oss  << std::setprecision(PRECISION) << n.lon() << " " << n.lat();
@@ -40,6 +44,70 @@ std::string get_point(const osmium::Node &n) {
     oss  << std::setprecision(PRECISION) << n.location().lon() << " " << n.location().lat();
     return "SRID=4326;POINT(" + oss.str() +  ")";
 };
+
+/**
+ * https://wiki.openstreetmap.org/wiki/Key:oneway
+ */
+std::string
+get_oneWay(const std::string osm_oneway) {
+    /*
+     *  check for the correct semantics
+     */
+    if (osm_oneway == "yes" || osm_oneway == "no" || osm_oneway == "-1"
+            || osm_oneway == "reversible" || osm_oneway == "alternating") {
+        return osm_oneway;
+    }
+
+    /*
+     * deprecated oneway for "yes"
+     */
+    if (osm_oneway == "true" || osm_oneway == "1") {
+        return "yes";
+    }
+
+    /*
+     * deprecated oneway for "no"
+     */
+    if (osm_oneway == "false" || osm_oneway == "0") {
+        return "no";
+    }
+
+    /*
+     * deprecated oneway for "-1"
+     */
+    if (osm_oneway == "reverse") {
+        return "-1";
+    }
+
+    return "UNKNOWN";
+}
+
+std::string
+get_oneway(const osmium::TagList& tags) {
+
+    const char* onewayptr = tags["oneway"];
+
+    auto value = onewayptr? get_oneWay(onewayptr) : "UNKNOWN";
+
+    /*
+     * was tagged, using the tag
+     */
+    if (value != "UNKNOWN") return value;
+
+    /*
+     * not tagged
+     */
+    const char* highway = tags["highway"];
+    const char* junction = tags["junction"];
+
+    if ((junction && get_value(junction) == "roundabout")
+            || (highway && get_value(highway) == "motorway")) {
+        return "YES";
+    }
+
+    return "UNKNOWN";
+}
+
 
 
 /*
@@ -462,6 +530,7 @@ int main(int argc, char *argv[]) {
             "x2 numeric(11,8) GENERATED ALWAYS AS (ST_X(ST_EndPoint(geom))) STORED,"
             "y2 numeric(11,8) GENERATED ALWAYS AS (ST_Y(ST_EndPoint(geom))) STORED,"
             "name TEXT,"
+            "oneway TEXT,"
             "osm_id BIGINT,"
             "osm_source BIGINT,"
             "osm_target BIGINT,"
@@ -548,7 +617,7 @@ int main(int argc, char *argv[]) {
         }
 
         /*
-         * end of ways_vertices_pgr COPY
+         * end of vertices COPY
          */
         vertices_stream.complete();
         vertices_action.commit();

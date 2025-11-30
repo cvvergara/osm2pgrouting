@@ -31,6 +31,8 @@ namespace po = boost::program_options;
 
 
 void get_option_description(po::options_description &od_desc) {
+    constexpr int CHUNK = 20000;
+
     /* po::options_description help_od_desc("Help"),
         required_od_desc("Required options"),
         optional_od_desc("Optional options");
@@ -58,7 +60,7 @@ void get_option_description(po::options_description &od_desc) {
         ("addnodes", "Import the osm_nodes, osm_ways & osm_relations tables.")
         ("attributes", "Include attributes information.")
         ("tags", "Include tag information.")
-        ("chunk", po::value<std::size_t>()->default_value(20000), "Exporting chunk size.")
+        ("chunk", po::value<std::size_t>()->default_value(CHUNK), "Exporting chunk size.")
         ("clean", "Drop previously created tables.")
         ("no-index", "Do not create indexes (Use when indexes are already created)");
 #if 0
