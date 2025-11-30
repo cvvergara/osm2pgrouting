@@ -301,7 +301,7 @@ class SplitWays : public osmium::handler::Handler {
         m_vertices(vertices),
         m_edge_conn(connInfo),
         m_edge_action(m_edge_conn),
-        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "osm_tags", "osm_oneway", "geom"})){
+        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "osm_tags", "oneway", "geom"})){
         };
 
     void after_split() {
@@ -319,6 +319,7 @@ class SplitWays : public osmium::handler::Handler {
         const char* nameptr = tags["name"];
         const char* onewayptr = tags["oneway"];
         const char* highway = way.tags()["highway"];
+        const auto oneway = get_oneway(tags);
         if (!highway) return;
 
         if (wfirst) {
@@ -375,7 +376,7 @@ class SplitWays : public osmium::handler::Handler {
                 m_vertices[target] = "SRID=4326;POINT(" + get_point(n) +")";
 
                 std::string geom = "SRID=4326;LINESTRING(" + points + ")";
-                auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, onewayptr, geom);
+                auto data = std::make_tuple(way.id(), source, target, nameptr, the_tags, oneway, geom);
                 m_edge_stream.write_values(data);
 
                 /*
@@ -535,7 +536,6 @@ int main(int argc, char *argv[]) {
             "osm_source BIGINT,"
             "osm_target BIGINT,"
             "osm_tags hstore,"
-            "osm_oneway TEXT,"
             "geom GEOMETRY(LINESTRING, 4326));";
         create_tables.exec(sql);
         sql = "CREATE TABLE IF NOT EXISTS vertices("
