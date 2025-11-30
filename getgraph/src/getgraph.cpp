@@ -301,7 +301,10 @@ class SplitWays : public osmium::handler::Handler {
         m_vertices(vertices),
         m_edge_conn(connInfo),
         m_edge_action(m_edge_conn),
-        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {"osm_id", "osm_source", "osm_target", "name", "osm_tags", "oneway", "geom"})){
+        m_edge_stream(pqxx::stream_to::table(m_edge_action, {"edges"}, {
+                    "osm_id", "osm_source", "osm_target", "name",
+                    "osm_tags", "oneway", "geom"
+                    })){
         };
 
     void after_split() {
@@ -535,6 +538,7 @@ int main(int argc, char *argv[]) {
             "osm_id BIGINT,"
             "osm_source BIGINT,"
             "osm_target BIGINT,"
+            "osm_oneway TEXT,"
             "osm_tags hstore,"
             "geom GEOMETRY(LINESTRING, 4326));";
         create_tables.exec(sql);
