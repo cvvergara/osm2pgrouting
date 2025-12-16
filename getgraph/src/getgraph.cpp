@@ -157,6 +157,18 @@ class NodeCount : public osmium::handler::Handler {
     {
     }
 
+    NodeCount(std::map<int64_t, size_t> &node_count, std::string connInfo, const std::string &schema) :
+        m_node_count(node_count),
+        m_node_conn(connInfo),
+        m_node_action(m_node_conn),
+        m_node_stream(pqxx::stream_to::table(m_node_action, {schema, "osm_nodes"}, {"osm_id", "name", "osm_tags", "geom"})),
+        m_way_conn(connInfo),
+        m_way_action(m_way_conn),
+        m_way_stream(pqxx::stream_to::table(m_way_action, {schema, "osm_ways"}, {"osm_id", "name", "osm_tags", "geom"}))
+    {
+        std::clog << __PRETTY_FUNCTION__ << "\n";
+    }
+
 
     void node(const osmium::Node& node) {
         /*
@@ -286,7 +298,6 @@ class NodeCount : public osmium::handler::Handler {
     pqxx::connection m_way_conn;
     pqxx::work m_way_action;
     pqxx::stream_to m_way_stream;
-
 };
 
 class SplitWays : public osmium::handler::Handler {
@@ -502,28 +513,43 @@ int main(int argc, char *argv[]) {
          * start a transaction
          */
         pqxx::work create_tables(dbconn);
-        std::string sql = "DROP TABLE IF EXISTS new_osm_nodes";
+
+        auto osm(vm.count("osm"));
+        std::clog << osm << "\n";
+        auto osm_nodes_table = vm["osm_schema"].as<std::string>() + ".osm_nodes";
+        auto osm_ways_table = vm["osm_schema"].as<std::string>() + ".osm_ways";
+
+        std::string sql = "DROP TABLE IF EXISTS " + osm_nodes_table;
         create_tables.exec(sql);
-        sql = "DROP TABLE IF EXISTS new_osm_ways";
+        sql = "DROP TABLE IF EXISTS " + osm_ways_table;
         create_tables.exec(sql);
+
         sql = "DROP TABLE IF EXISTS edges";
         create_tables.exec(sql);
         sql = "DROP TABLE IF EXISTS vertices";
         create_tables.exec(sql);
-        sql = "CREATE TABLE IF NOT EXISTS new_osm_nodes("
-            "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
-            "osm_id BIGINT,"
-            "name TEXT,"
-            "osm_tags hstore,"
-            "geom GEOMETRY(POINT, 4326));";
-        create_tables.exec(sql);
-        sql = "CREATE TABLE IF NOT EXISTS new_osm_ways("
-            "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
-            "osm_id BIGINT,"
-            "name TEXT,"
-            "osm_tags hstore,"
-            "geom GEOMETRY(LINESTRING, 4326));";
-        create_tables.exec(sql);
+        if (osm) {
+            std::clog << "Creating 'osm' tables\n";
+            sql = "CREATE SCHEMA IF NOT EXISTS " + vm["osm_schema"].as<std::string>();
+            create_tables.exec(sql);
+            std::clog << "Created 'osm' schema\n";
+            sql = "CREATE TABLE IF NOT EXISTS " + osm_nodes_table + "("
+                "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
+                "osm_id BIGINT,"
+                "name TEXT,"
+                "osm_tags hstore,"
+                "geom GEOMETRY(POINT, 4326));";
+            create_tables.exec(sql);
+            std::clog << "Created '" + osm_nodes_table << "' table\n";
+            sql = "CREATE TABLE IF NOT EXISTS " + osm_ways_table + "("
+                "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
+                "osm_id BIGINT,"
+                "name TEXT,"
+                "osm_tags hstore,"
+                "geom GEOMETRY(LINESTRING, 4326));";
+            create_tables.exec(sql);
+            std::clog << "Created '" + osm_ways_table << "' table\n";
+        }
         sql = "CREATE TABLE IF NOT EXISTS edges("
             "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,"
             "source BIGINT,"
@@ -574,7 +600,9 @@ int main(int argc, char *argv[]) {
         /*
          * Create the handler
          */
-        NodeCount node_count_handler(node_count, connection_str);
+        NodeCount node_count_handler = osm? NodeCount(node_count, connection_str, vm["osm_schema"].as<std::string>()):
+
+
 
         // Apply the handler to the reader
         std::clog << "Starting OSM node count processing..." << std::endl;

@@ -32,6 +32,7 @@ namespace po = boost::program_options;
 
 void get_option_description(po::options_description &od_desc) {
     constexpr int CHUNK = 20000;
+    const std::string OSM_SCHEMA = "osm";
 
     /* po::options_description help_od_desc("Help"),
         required_od_desc("Required options"),
@@ -57,7 +58,9 @@ void get_option_description(po::options_description &od_desc) {
 #if 0
         ("postgis", "Install postgis if not found.")  // TODO(vicky) remove before realesing
 #endif
-        ("addnodes", "Import the osm_nodes, osm_ways & osm_relations tables.")
+        ("osm", "Import the osm_nodes, osm_ways & osm_relations tables.")
+        ("osm_schema", po::value<std::string>()->default_value(OSM_SCHEMA), "Schema for osm tables. Ignored when `osm` is not set")
+
         ("attributes", "Include attributes information.")
         ("tags", "Include tag information.")
         ("chunk", po::value<std::size_t>()->default_value(CHUNK), "Exporting chunk size.")
